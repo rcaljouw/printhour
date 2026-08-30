@@ -5,7 +5,7 @@ services:
       APP_PORT: 3737
 
   web:
-    image: ghcr.io/CHANGEME/printhour:1.0.0
+    image: ghcr.io/rcaljouw/printhour:1.0.0
     restart: on-failure
     stop_grace_period: 30s
     environment:

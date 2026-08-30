@@ -3,7 +3,7 @@ id: caljouw-printhour
 name: PrintHour
 tagline: Kostprijs, voorraad en offertes voor 3D-printen
 category: finance
-version: "1.0.0"
+version: "0.0.0"   # bump when an image is actually published
 port: 3737
 description: >-
   Bereken wat een 3D-print werkelijk kost — filament, stroom, machine-uren,
@@ -21,15 +21,11 @@ description: >-
   Dat valt onder de back-ups van Umbrel, is te openen met DB Browser for
   SQLite, en de app maakt daarnaast elke dag een momentopname.
 developer: Ronald Caljouw
-website: https://github.com/CHANGEME/printhour
+website: https://github.com/rcaljouw/printhour
 submitter: Ronald Caljouw
-submission: https://github.com/CHANGEME/printhour
-repo: https://github.com/CHANGEME/printhour
-support: https://github.com/CHANGEME/printhour/issues
-gallery:
-  - 1.jpg
-  - 2.jpg
-  - 3.jpg
+submission: https://github.com/rcaljouw/printhour
+repo: https://github.com/rcaljouw/printhour
+support: https://github.com/rcaljouw/printhour/issues
 path: ""
 releaseNotes: ""
 dependencies: []

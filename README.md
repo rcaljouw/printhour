@@ -67,7 +67,12 @@ there points somewhere other than the folder you see over SSH. Note that
 nothing sits in front of it: PrintHour holds client names and prices, so bind
 it to localhost and reach it over Tailscale if your network is shared.
 
-**On an Umbrel, as an app** — see [umbrel/](umbrel/). The bundled server keeps the
+**On an Umbrel, as an app** — the manifests in [umbrel/](umbrel/) are a
+blueprint, not a working install path: they expect a published image that does
+not exist yet. Use the Portainer route above.
+
+Once it runs, [docs/RUNNING.md](docs/RUNNING.md) covers updating, backups and
+what to check when something breaks. The bundled server keeps the
 database on the Umbrel instead of on the client, with a version token so a
 second tab cannot silently overwrite the first. Build the image with
 `docker build -f server/Dockerfile .` from the repository root.
@@ -94,6 +99,7 @@ opened; existing rows are left alone.
 ```bash
 npm install
 npm test
+./scripts/backup.sh          # pull a dated copy of a running instance
 ```
 
 The suite boots the real `app/index.html` in jsdom against a real SQLite

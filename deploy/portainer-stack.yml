@@ -27,7 +27,10 @@ services:
   printhour:
     container_name: printhour
     build:
-      context: .
+      # Paths are relative to THIS file, not to the repository root, so the
+      # context has to step up one level. Portainer clones the repo and runs
+      # compose from deploy/, and `context: .` would look for deploy/server/.
+      context: ..
       dockerfile: server/Dockerfile
     # image: ghcr.io/YOURNAME/printhour:latest
 

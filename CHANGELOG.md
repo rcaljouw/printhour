@@ -3,6 +3,19 @@
 The build stamp in the app's database bar matches the entries below, so the
 running version is never a guess.
 
+## 2026-08-30a
+
+- Portainer builds the stack from `deploy/`, not from the repository root, so
+  the compose build context now steps up a level. Deploying straight from the
+  repo failed before this.
+- Server mode told you "not reachable" whenever a save failed, including when
+  the server answered perfectly well and refused to write. Network failures,
+  HTTP errors and conflicts are now three separate messages, and the server's
+  own reason is shown.
+- The server checks at startup that its data directory is writable and exits
+  with an explanation if it is not. A read-only mount is the most common
+  deployment mistake and it used to look healthy until the first save.
+
 ## 2026-08-29b
 
 - Filament spools carry an article number and an order link too, with the same

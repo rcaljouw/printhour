@@ -177,12 +177,31 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+/* Prove at startup that the data directory is writable. A read-only mount is
+   the single most common deployment mistake, and without this check the app
+   looks healthy right up until the first save fails. */
+async function checkWritable() {
+  const probe = path.join(DATA_DIR, '.write-probe');
+  await fsp.writeFile(probe, 'ok');
+  await fsp.unlink(probe);
+}
+
 fsp.mkdir(DATA_DIR, { recursive: true })
+  .then(checkWritable)
   .then(() => server.listen(PORT, '0.0.0.0', () => {
     console.log(`[printhour] listening on ${PORT}`);
     console.log(`[printhour] database: ${DB_PATH}`);
+    console.log('[printhour] data directory is writable');
   }))
-  .catch(err => { console.error('cannot create data directory', err); process.exit(1); });
+  .catch(err => {
+    console.error('');
+    console.error('[printhour] CANNOT WRITE TO ' + DATA_DIR);
+    console.error('[printhour] ' + err.message);
+    console.error('[printhour] The container runs as uid 1500. Fix the host folder with:');
+    console.error('[printhour]   sudo chown -R 1500:1500 <the folder you mounted at /data>');
+    console.error('');
+    process.exit(1);
+  });
 
 for (const sig of ['SIGTERM','SIGINT']) {
   process.on(sig, () => server.close(() => process.exit(0)));

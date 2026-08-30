@@ -219,7 +219,7 @@
       <span class="dbdot" id="dbdot"></span>
       <span class="dbname" id="dbname">No database open</span>
       <span class="dbsave" id="dbsave"></span>
-      <span class="dbbuild" id="dbbuild">build 2026-08-29b</span>
+      <span class="dbbuild" id="dbbuild">build 2026-08-30a</span>
       <span class="dbacts">
         <button class="btn ghost sm" type="button" id="db_open">Open…</button>
         <button class="btn ghost sm" type="button" id="db_new">New database</button>
@@ -1042,22 +1042,42 @@ async function writeFile(){
 
   if(serverMode){
     if(serverStale){ dbStatus('err',null,'Elders gewijzigd — herlaad de pagina'); return; }
+
+    /* Onbereikbaar en geweigerd zijn twee verschillende problemen. Ze op één
+       hoop gooien stuurt je het verkeerde gat in: een 500 omdat de server niet
+       naar schijf mag schrijven las eerder als "netwerk stuk". */
+    let r;
     try{
-      const r=await fetch('api/db',{method:'PUT',
+      r=await fetch('api/db',{method:'PUT',
         headers:{'Content-Type':'application/octet-stream','If-Match':String(serverVersion==null?'':serverVersion)},
         body:bytes});
-      if(r.status===409){
-        serverStale=true;
-        dbStatus('err',null,'Elders gewijzigd — herlaad voordat je verder werkt');
-        return;
-      }
-      if(!r.ok) throw new Error('HTTP '+r.status);
+    }catch(netErr){
+      console.error('PUT /api/db kon de server niet bereiken', netErr);
+      dbStatus('err',null,'Server niet bereikbaar — wijzigingen staan alleen in dit venster');
+      return;
+    }
+
+    if(r.status===409){
+      serverStale=true;
+      dbStatus('err',null,'Elders gewijzigd — herlaad voordat je verder werkt');
+      return;
+    }
+    if(!r.ok){
+      let detail='';
+      try{ const j=await r.json(); detail=j.error||j.message||''; }catch(e){ /* geen json */ }
+      console.error('PUT /api/db geweigerd', r.status, detail);
+      dbStatus('err',null,'Server weigert op te slaan (HTTP '+r.status+
+        (detail?': '+detail:'')+') — kijk in de containerlogs');
+      return;
+    }
+
+    try{
       const j=await r.json();
       serverVersion=j.version; dirty=false;
       dbStatus('ok',null,'Opgeslagen op Umbrel — '+new Date().toLocaleTimeString('nl-NL'));
     }catch(err){
       console.error(err);
-      dbStatus('err',null,'Umbrel niet bereikbaar — wijzigingen staan alleen in dit venster');
+      dbStatus('err',null,'Server gaf een onverwacht antwoord — kijk in de containerlogs');
     }
     return;
   }

@@ -60,7 +60,10 @@ the app reconnect to your database automatically.
 **On an Umbrel, via Portainer** — the quickest route, and no registry needed:
 point Portainer at this repository with
 [`deploy/portainer-stack.yml`](deploy/portainer-stack.yml) and it builds the
-image on the machine itself, so the architecture always matches. Note that
+image on the machine itself, so the architecture always matches. The database
+lives in a named Docker volume rather than a host path, because Umbrel runs
+Portainer against a Docker daemon that is itself containerised — a bind mount
+there points somewhere other than the folder you see over SSH. Note that
 nothing sits in front of it: PrintHour holds client names and prices, so bind
 it to localhost and reach it over Tailscale if your network is shared.
 

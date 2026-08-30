@@ -50,9 +50,14 @@ services:
       KEEP_BACKUPS: 14
 
     volumes:
-      # A path you control and already back up. The daily snapshots the server
-      # writes land in ./backups next to the database.
-      - /home/umbrel/printhour-data:/data
+      # A named volume, not a host path. On Umbrel, Portainer talks to a Docker
+      # daemon that itself runs in a container, so a bind mount like
+      # /home/umbrel/printhour-data is resolved inside THAT container and not
+      # on the machine you SSH into. You end up chowning a folder nobody uses
+      # while the container writes to a root-owned directory it cannot touch.
+      # A named volume has no such ambiguity, and the Dockerfile hands it to
+      # uid 1500 on creation.
+      - printhour-data:/data
 
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3737/api/health"]
@@ -60,3 +65,6 @@ services:
       timeout: 5s
       start_period: 5s
       retries: 3
+
+volumes:
+  printhour-data:

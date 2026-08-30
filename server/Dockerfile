@@ -13,10 +13,16 @@ ENV PORT=3737
 ENV DB_PATH=/data/printhour.sqlite
 ENV KEEP_BACKUPS=14
 
-VOLUME ["/data"]
-EXPOSE 3737
-
 RUN addgroup -g 1500 printhour && adduser -D -u 1500 -G printhour printhour
+
+# /data must exist in the image and be owned by the app user BEFORE it is
+# declared a volume. Docker seeds an empty named volume from the image
+# directory, ownership included — without this the volume arrives owned by
+# root and the container cannot write to its own database.
+RUN mkdir -p /data && chown printhour:printhour /data
+VOLUME ["/data"]
+
+EXPOSE 3737
 USER printhour
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s \

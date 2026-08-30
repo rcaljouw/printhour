@@ -3,6 +3,16 @@
 The build stamp in the app's database bar matches the entries below, so the
 running version is never a guess.
 
+## 2026-08-30b
+
+- The Portainer stack now uses a named Docker volume instead of a host bind
+  mount. On Umbrel, Portainer runs against a Docker-in-Docker daemon, so
+  `/home/umbrel/printhour-data` resolves inside that container and not on the
+  host: you chown a folder nobody uses while the container writes to a
+  root-owned directory it cannot touch.
+- The image creates `/data` owned by uid 1500 before declaring it a volume, so
+  an empty named volume inherits that ownership. No manual chown at all.
+
 ## 2026-08-30a
 
 - Portainer builds the stack from `deploy/`, not from the repository root, so

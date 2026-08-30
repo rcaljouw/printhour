@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="PrintHour">
+  <title>PrintHour</title>
+  <!--
+    One circle doing two jobs: a filament spool seen edge-on, and a clock face.
+    Four ticks read as hours; the blue arm reads as both a hand and the loose
+    end of a strand. Solid shapes only, no gradients, legible at 16px.
+  -->
+  <g fill="none" stroke="#14161A" stroke-width="3" stroke-linecap="round">
+    <!-- spool flange / dial -->
+    <circle cx="24" cy="24" r="19"/>
+    <!-- hour ticks at 12, 3, 6, 9 -->
+    <path d="M24 7.5v4M40.5 24h-4M24 40.5v-4M7.5 24h4"/>
+  </g>
+  <!-- hand and strand end -->
+  <g stroke="#1B45D6" stroke-width="3.5" stroke-linecap="round">
+    <path d="M24 24 33 15"/>
+  </g>
+  <circle cx="33" cy="15" r="3" fill="#1B45D6"/>
+  <!-- hub / spool core -->
+  <circle cx="24" cy="24" r="5.5" fill="#14161A"/>
+  <circle cx="24" cy="24" r="1.75" fill="#FFFFFF"/>
+</svg>

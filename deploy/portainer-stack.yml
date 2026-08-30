@@ -1,0 +1,59 @@
+# PrintHour — Portainer stack
+#
+# Two ways to use this. Both keep the database on the Umbrel, in a folder you
+# choose, so your Mac and your phone look at the same file.
+#
+# A. BUILD FROM SOURCE (no registry needed)
+#    Portainer -> Stacks -> Add stack -> Repository
+#      Repository URL : https://github.com/YOURNAME/printhour
+#      Reference      : refs/heads/main
+#      Compose path   : deploy/portainer-stack.yml
+#    Portainer clones the repo and builds the image on the Umbrel itself, so
+#    the architecture always matches — no arm64/amd64 juggling.
+#
+# B. USE A PUBLISHED IMAGE
+#    Comment out the `build:` block, uncomment `image:`, and paste this file
+#    into Portainer -> Stacks -> Add stack -> Web editor.
+#
+# Before you deploy, create the data folder on the Umbrel and make it writable
+# by the container user (uid 1500, set in the Dockerfile):
+#
+#    mkdir -p /home/umbrel/printhour-data
+#    sudo chown -R 1500:1500 /home/umbrel/printhour-data
+#
+# Then open http://umbrel.local:3737 — use Chrome or Edge.
+
+services:
+  printhour:
+    container_name: printhour
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    # image: ghcr.io/YOURNAME/printhour:latest
+
+    restart: unless-stopped
+    stop_grace_period: 30s
+
+    ports:
+      # Reachable to anything on your network. There is no login in front of
+      # this: PrintHour holds client names and prices, so treat the LAN as the
+      # boundary, or bind to localhost and reach it over Tailscale instead.
+      - "3737:3737"
+      # - "127.0.0.1:3737:3737"
+
+    environment:
+      PORT: 3737
+      DB_PATH: /data/printhour.sqlite
+      KEEP_BACKUPS: 14
+
+    volumes:
+      # A path you control and already back up. The daily snapshots the server
+      # writes land in ./backups next to the database.
+      - /home/umbrel/printhour-data:/data
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3737/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3

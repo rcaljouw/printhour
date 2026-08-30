@@ -1,0 +1,36 @@
+manifestVersion: 1
+id: caljouw-printhour
+name: PrintHour
+tagline: Kostprijs, voorraad en offertes voor 3D-printen
+category: finance
+version: "1.0.0"
+port: 3737
+description: >-
+  Bereken wat een 3D-print werkelijk kost — filament, stroom, machine-uren,
+  jouw eigen tijd, hardware en verpakking — en houd voorraad, producten,
+  offertes en marktdagen bij.
+
+
+  Rangschikt producten op winst per printeruur in plaats van marge per stuk,
+  omdat printertijd het schaarse middel is. Rekent BTW mee, met een schakelaar
+  voor de kleineondernemersregeling, en vergelijkt wat je overhoudt per
+  verkoopkanaal.
+
+
+  Alle gegevens staan in één SQLite-bestand in de app-datamap van deze Umbrel.
+  Dat valt onder de back-ups van Umbrel, is te openen met DB Browser for
+  SQLite, en de app maakt daarnaast elke dag een momentopname.
+developer: Ronald Caljouw
+website: https://github.com/CHANGEME/printhour
+submitter: Ronald Caljouw
+submission: https://github.com/CHANGEME/printhour
+repo: https://github.com/CHANGEME/printhour
+support: https://github.com/CHANGEME/printhour/issues
+gallery:
+  - 1.jpg
+  - 2.jpg
+  - 3.jpg
+path: ""
+releaseNotes: ""
+dependencies: []
+permissions: []

@@ -1,0 +1,17 @@
+{
+  "name": "printhour",
+  "version": "2026.8.28",
+  "description": "3D printing cost, inventory and quoting — priced by the print hour, not by the piece",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\"",
+    "serve": "cd app && python3 -m http.server 8777"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0",
+    "sql.js": "^1.14.0"
+  },
+  "keywords": ["3d-printing", "cost-calculator", "sqlite", "local-first", "quoting", "inventory"],
+  "repository": { "type": "git", "url": "https://github.com/CHANGEME/printhour.git" }
+}

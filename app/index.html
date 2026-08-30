@@ -1,0 +1,2420 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PrintHour</title>
+<link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+<style>
+  :root{
+    --ink:#14161A; --ash:#5A6472; --line:#D4D7DC; --ground:#EDEEF0; --surface:#FFFFFF;
+    --blue:#1B45D6; --orange:#FF5A1F; --violet:#6B3FD4; --teal:#0E8F7E; --yellow:#E8B31A; --red:#D62828;
+    --mono:ui-monospace,"SF Mono","Roboto Mono","DejaVu Sans Mono",Menlo,Consolas,monospace;
+    --sans:"Helvetica Neue",Inter,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  .app{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45;
+       padding:0 0 72px;-webkit-font-smoothing:antialiased}
+  .app h1,.app h2,.app h3,.app p,.app ul{margin:0}
+  .wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+
+  .mast{border-bottom:2px solid var(--ink);padding:26px 0 0}
+  .mast .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ash)}
+  .mast h1{font-size:clamp(26px,4.4vw,42px);font-weight:800;letter-spacing:-.035em;line-height:1;text-transform:uppercase}
+  .brand{display:flex;align-items:center;gap:12px;margin-top:10px}
+  .brandmark{flex:none;display:block}
+  .mast h1 em{font-style:normal;color:var(--blue)}
+  .tabs{display:flex;gap:0;overflow-x:auto;margin-top:20px;-ms-overflow-style:none;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tabs button{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;
+    padding:11px 14px;border:0;border-bottom:3px solid transparent;background:none;color:var(--ash);cursor:pointer}
+  .tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--blue);font-weight:700}
+  .tabs button .dot{display:inline-block;width:6px;height:6px;background:var(--red);border-radius:50%;margin-left:5px;vertical-align:middle}
+
+  .page{display:none;padding-top:24px}
+  .page.on{display:block}
+  .cols{display:grid;grid-template-columns:1fr 400px;gap:20px;align-items:start}
+  .cols.even{grid-template-columns:1fr 1fr}
+  @media(max-width:920px){.cols,.cols.even{grid-template-columns:1fr}}
+
+  .card{background:var(--surface);border:1px solid var(--line);padding:18px}
+  .card + .card{margin-top:16px}
+  .card > h2{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:14px;
+    display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .card > h2 .note{color:var(--ash);letter-spacing:.03em;text-transform:none;font-size:11px;font-weight:400}
+
+  .row{display:grid;grid-template-columns:repeat(2,1fr);gap:11px 12px}
+  .row.three{grid-template-columns:repeat(3,1fr)}
+  .row.four{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:640px){.row,.row.three,.row.four{grid-template-columns:1fr 1fr}}
+  .f{display:flex;flex-direction:column;gap:5px;min-width:0}
+  .f.wide{grid-column:1/-1}
+  .f label{font-size:12px;color:var(--ash)}
+  .inp{display:flex;border:1px solid var(--line);background:var(--surface)}
+  .inp:focus-within{border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue)}
+  .inp .pre,.inp .suf{font-family:var(--mono);font-size:12px;color:var(--ash);background:var(--ground);
+    display:flex;align-items:center;padding:0 8px;white-space:nowrap}
+  .inp .pre{border-right:1px solid var(--line)} .inp .suf{border-left:1px solid var(--line)}
+  .app input,.app select,.app textarea{font-family:var(--mono);font-size:14px;color:var(--ink);
+    border:0;outline:0;background:transparent;padding:9px 10px;width:100%;min-width:0}
+  .app textarea{font-family:var(--sans);resize:vertical;min-height:64px}
+  .app select{font-family:var(--sans);cursor:pointer;-webkit-appearance:none;appearance:none;padding-right:30px;
+    background-image:linear-gradient(45deg,transparent 50%,var(--ash) 50%),linear-gradient(135deg,var(--ash) 50%,transparent 50%);
+    background-position:calc(100% - 15px) 18px,calc(100% - 10px) 18px;background-size:5px 5px;background-repeat:no-repeat}
+  .app input[type=number]::-webkit-outer-spin-button,.app input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .app input[type=number]{-moz-appearance:textfield}
+  .app input[type=color]{padding:2px;height:36px;cursor:pointer}
+
+  .seg{display:flex;border:1px solid var(--ink)}
+  .seg button{flex:1;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    padding:9px 6px;border:0;background:var(--surface);color:var(--ink);cursor:pointer}
+  .seg button + button{border-left:1px solid var(--ink)}
+  .seg button[aria-pressed=true]{background:var(--ink);color:#fff}
+
+  .btn{font-family:var(--mono);font-size:11px;letter-spacing:.11em;text-transform:uppercase;
+    padding:10px 13px;border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer}
+  .btn.ghost{background:var(--surface);color:var(--ink)}
+  .btn.danger{background:var(--surface);color:var(--red);border-color:var(--red)}
+  .btn.sm{padding:6px 9px;font-size:10px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .hint{font-size:12px;color:var(--ash);margin-top:10px}
+  .derived{font-family:var(--mono);font-size:12px;color:var(--blue)}
+  .status{font-size:12px;color:var(--ash);margin-top:10px;min-height:16px}
+  .empty{color:var(--ash);font-size:13px;padding:6px 0}
+
+  details.adv{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}
+  details.adv > summary{font-family:var(--mono);font-size:11px;letter-spacing:.13em;text-transform:uppercase;
+    cursor:pointer;color:var(--ash);list-style:none;display:flex;align-items:center;gap:8px}
+  details.adv > summary::-webkit-details-marker{display:none}
+  details.adv > summary::before{content:"+";color:var(--blue)}
+  details.adv[open] > summary::before{content:"\2013"}
+  details.adv > *:not(summary){margin-top:12px}
+
+  /* lists */
+  .list .it{display:grid;grid-template-columns:12px 1fr auto auto;gap:10px;align-items:center;
+    padding:10px 0;border-bottom:1px solid var(--line)}
+  .list .it:last-child{border-bottom:0}
+  .list .sw{width:12px;height:12px;border:1px solid var(--line)}
+  .list .nm{font-size:13px;min-width:0}
+  .list .nm b{font-weight:600}
+  .list .nm a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+  .list .nm a:hover{color:var(--blue)}
+  .list .nm small{display:block;color:var(--ash);font-family:var(--mono);font-size:11px}
+  .list .val{font-family:var(--mono);font-size:13px;text-align:right;white-space:nowrap}
+  .list .val small{display:block;color:var(--ash);font-size:11px}
+  .list .acts{display:flex;gap:4px}
+  .list .acts button{border:0;background:none;color:var(--ash);cursor:pointer;font-family:var(--mono);font-size:11px;padding:3px 5px}
+  .list .acts button:hover{color:var(--ink)}
+  .low{color:var(--red)}
+  .tag{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+    padding:2px 6px;border:1px solid var(--line);color:var(--ash)}
+  .tag.draft{color:var(--ash)} .tag.sent{color:var(--blue);border-color:var(--blue)}
+  .tag.accepted{color:var(--teal);border-color:var(--teal)} .tag.paid{background:var(--teal);color:#fff;border-color:var(--teal)}
+  .tag.lost{color:var(--red);border-color:var(--red)}
+
+  /* totals */
+  .total{background:var(--ink);color:#fff;padding:18px;border:1px solid var(--ink)}
+  .total .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#9AA3B2}
+  .total .big{font-family:var(--mono);font-size:clamp(30px,6vw,42px);font-weight:600;letter-spacing:-.03em;margin-top:5px}
+  .total .big span{font-size:18px;color:#9AA3B2;letter-spacing:0;margin-left:6px}
+  .total .meta{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid #333842}
+  .total .meta div{font-family:var(--mono);font-size:11px;color:#9AA3B2}
+  .total .meta b{display:block;font-size:15px;color:#fff;font-weight:600;margin-top:3px}
+
+  .stack{display:flex;height:32px;width:100%;background:var(--ground);border:1px solid var(--line);overflow:hidden}
+  .stack i{display:block;height:100%;transition:width .18s ease}
+  .legend .l{display:grid;grid-template-columns:10px 1fr auto 44px;gap:10px;align-items:center;
+    padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .legend .l:last-child{border-bottom:0}
+  .legend .sw{width:10px;height:10px}
+  .legend .amt{font-family:var(--mono);font-size:13px}
+  .legend .pct{font-family:var(--mono);font-size:11px;color:var(--ash);text-align:right}
+  .legend .l.sum{border-top:2px solid var(--ink);margin-top:4px;padding-top:9px;font-weight:700;border-bottom:0}
+
+  .ladder .l{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;
+    padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer}
+  .ladder .l:last-child{border-bottom:0}
+  .ladder .name{font-size:13px}
+  .ladder .name small{display:block;color:var(--ash);font-family:var(--mono);font-size:11px}
+  .ladder .price{font-family:var(--mono);font-size:16px;text-align:right}
+  .ladder .price small{display:block;color:var(--ash);font-size:11px}
+  .ladder .l.on .name,.ladder .l.on .price{color:var(--blue)} .ladder .l.on .name{font-weight:700}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{border:1px solid var(--line);background:var(--surface);padding:14px}
+  .kpi .k{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ash)}
+  .kpi .v{font-family:var(--mono);font-size:22px;font-weight:600;margin-top:6px;letter-spacing:-.02em}
+  .kpi .s{font-size:11px;color:var(--ash);margin-top:2px}
+  .kpi.pos .v{color:var(--teal)} .kpi.neg .v{color:var(--red)}
+
+  /* Label above the bar, never inside it: dark text over a saturated fill
+     is unreadable, and the fill width changes with the data. */
+  .barchart{display:flex;flex-direction:column;gap:14px;margin-top:4px}
+  .barchart .b{display:grid;grid-template-columns:1fr 78px;gap:5px 10px;align-items:center;font-size:13px}
+  .barchart .lab{grid-column:1/-1;font-size:13px;color:var(--ink);line-height:1.3}
+  .barchart .lab small{color:var(--ash);font-family:var(--mono);font-size:11px}
+  .barchart .track{height:14px;background:var(--ground);border:1px solid var(--line)}
+  .barchart .track i{display:block;height:100%;background:var(--blue)}
+  .barchart .n{font-family:var(--mono);font-size:12px;text-align:right;white-space:nowrap}
+
+  /* quote document */
+  .doc{background:#fff;border:1px solid var(--line);padding:32px}
+  .doc .head{display:flex;justify-content:space-between;gap:20px;border-bottom:3px solid var(--ink);padding-bottom:16px}
+  .doc .head h3{font-size:22px;font-weight:800;letter-spacing:-.02em}
+  .doc .head .biz{font-size:12px;color:var(--ash);line-height:1.6;text-align:right}
+  .doc .meta{display:flex;gap:28px;flex-wrap:wrap;margin:18px 0;font-size:12px}
+  .doc .meta b{display:block;font-family:var(--mono);font-size:13px;color:var(--ink);font-weight:600}
+  .doc .meta span{color:var(--ash);font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+  .doc table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
+  .doc th{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ash);
+    text-align:left;border-bottom:1px solid var(--ink);padding:8px 6px}
+  .doc td{padding:9px 6px;border-bottom:1px solid var(--line);font-size:13px}
+  .doc td.n,.doc th.n{text-align:right;font-family:var(--mono)}
+  .doc tfoot td{border-bottom:0;padding:5px 6px}
+  .doc tfoot tr.grand td{border-top:2px solid var(--ink);font-weight:700;font-size:15px;padding-top:9px}
+  .doc .foot{margin-top:24px;padding-top:14px;border-top:1px solid var(--line);font-size:11px;color:var(--ash)}
+  .accentbar{height:6px;width:100%;margin-bottom:18px}
+
+  @media print{
+    body *{visibility:hidden}
+    #printArea,#printArea *{visibility:visible}
+    #printArea{position:absolute;left:0;top:0;width:100%;padding:0}
+    #printArea .doc{border:0;padding:0}
+    .noprint{display:none!important}
+  }
+
+  /* database bar */
+  .dbbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;
+    padding:9px 12px;border:1px solid var(--line);background:var(--surface)}
+  .dbdot{width:9px;height:9px;border-radius:50%;background:var(--ash);flex:none}
+  .dbdot.ok{background:var(--teal)} .dbdot.warn{background:var(--yellow)} .dbdot.err{background:var(--red)}
+  .dbname{font-family:var(--mono);font-size:12px}
+  .dbsave{font-family:var(--mono);font-size:11px;color:var(--ash);flex:1;min-width:120px}
+  .dbbuild{font-family:var(--mono);font-size:10px;color:var(--ash);opacity:.7;white-space:nowrap}
+  .dbacts{display:flex;gap:6px;flex-wrap:wrap}
+
+  /* startup gate */
+  .gate{position:fixed;inset:0;background:rgba(20,22,26,.94);z-index:99;
+    display:flex;align-items:center;justify-content:center;padding:20px}
+  .gate .box{background:var(--surface);border:1px solid var(--line);max-width:520px;width:100%;padding:26px}
+  .gate h3{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
+  .gate p{font-size:13px;color:var(--ash);margin-bottom:16px}
+  .gate .opt{border-top:1px solid var(--line);padding:14px 0;display:flex;justify-content:space-between;
+    align-items:center;gap:14px}
+  .gate .opt div{font-size:13px}
+  .gate .opt small{display:block;color:var(--ash);font-size:12px;margin-top:2px}
+  .warnbox{border:1px solid var(--yellow);background:#FFFBEF;padding:10px 12px;font-size:12px;margin-bottom:16px}
+</style>
+
+<div class="app">
+<div class="wrap">
+
+  <header class="mast">
+    <div class="eyebrow">Kostprijs per printeruur · voorraad · offertes</div>
+    <div class="brand">
+      <img src="./assets/logo.svg" alt="" width="40" height="40" class="brandmark">
+      <h1>Print<em>Hour</em></h1>
+    </div>
+    <div class="dbbar" id="dbbar">
+      <span class="dbdot" id="dbdot"></span>
+      <span class="dbname" id="dbname">No database open</span>
+      <span class="dbsave" id="dbsave"></span>
+      <span class="dbbuild" id="dbbuild">build 2026-08-29b</span>
+      <span class="dbacts">
+        <button class="btn ghost sm" type="button" id="db_open">Open…</button>
+        <button class="btn ghost sm" type="button" id="db_new">New database</button>
+        <button class="btn ghost sm" type="button" id="db_copy">Save a copy</button>
+      </span>
+    </div>
+    <div class="tabs" id="tabs" role="tablist">
+      <button role="tab" data-tab="calc" aria-selected="true">Calculator</button>
+      <button role="tab" data-tab="quotes" aria-selected="false">Quotes</button>
+      <button role="tab" data-tab="products" aria-selected="false">Products</button>
+      <button role="tab" data-tab="filaments" aria-selected="false">Filaments</button>
+      <button role="tab" data-tab="printers" aria-selected="false">Printers</button>
+      <button role="tab" data-tab="supplies" aria-selected="false">Supplies</button>
+      <button role="tab" data-tab="market" aria-selected="false">Marketplace</button>
+      <button role="tab" data-tab="events" aria-selected="false">Events</button>
+      <button role="tab" data-tab="insights" aria-selected="false">Insights</button>
+      <button role="tab" data-tab="settings" aria-selected="false">Settings</button>
+    </div>
+  </header>
+
+  <!-- ================= CALCULATOR ================= -->
+  <section class="page on" id="page-calc">
+    <div class="cols">
+      <div>
+        <div class="card">
+          <h2>The job</h2>
+          <div class="row">
+            <div class="f wide"><label for="jobName">Part name</label>
+              <div class="inp"><input type="text" id="jobName" placeholder="e.g. cable bracket v3"></div></div>
+            <div class="f"><label for="c_qty">Units in this batch</label>
+              <div class="inp"><input type="number" id="c_qty" value="1" min="1" step="1"><span class="suf">pcs</span></div></div>
+            <div class="f"><label for="c_fail">Failure allowance</label>
+              <div class="inp"><input type="number" id="c_fail" value="8" min="0" step="1"><span class="suf">%</span></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Material <span class="note" id="c_matNote"></span></h2>
+          <div class="row three">
+            <div class="f wide"><label for="c_filament">Spool from your library</label>
+              <div class="inp"><select id="c_filament"></select></div></div>
+            <div class="f"><label for="c_perKg">Price</label>
+              <div class="inp"><span class="pre">€</span><input type="number" id="c_perKg" value="22" min="0" step="0.5"><span class="suf">/kg</span></div></div>
+            <div class="f"><label for="c_grams">Used in the print</label>
+              <div class="inp"><input type="number" id="c_grams" value="85" min="0" step="1"><span class="suf">g</span></div></div>
+            <div class="f"><label for="c_waste">Purge / prime</label>
+              <div class="inp"><input type="number" id="c_waste" value="3" min="0" step="1"><span class="suf">%</span></div></div>
+          </div>
+          <p class="hint" id="c_stockNote"></p>
+        </div>
+
+        <div class="card">
+          <h2>Machine <span class="note" id="c_printerNote"></span></h2>
+          <div class="row four">
+            <div class="f wide"><label for="c_printer">Printer profile</label>
+              <div class="inp"><select id="c_printer"></select></div></div>
+            <div class="f"><label for="c_hrs">Print time</label>
+              <div class="inp"><input type="number" id="c_hrs" value="4" min="0" step="1"><span class="suf">h</span></div></div>
+            <div class="f"><label for="c_mins">&nbsp;</label>
+              <div class="inp"><input type="number" id="c_mins" value="20" min="0" max="59" step="1"><span class="suf">min</span></div></div>
+            <div class="f"><label for="c_rate">Machine rate</label>
+              <div class="inp"><span class="pre">€</span><input type="number" id="c_rate" value="0.35" min="0" step="0.05"><span class="suf">/h</span></div></div>
+            <div class="f"><label for="c_watts">Average draw</label>
+              <div class="inp"><input type="number" id="c_watts" value="110" min="0" step="5"><span class="suf">W</span></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Your hands <span class="note">setup counts once per batch</span></h2>
+          <div class="row three">
+            <div class="f"><label for="c_setup">Prep &amp; setup (batch)</label>
+              <div class="inp"><input type="number" id="c_setup" value="15" min="0" step="5"><span class="suf">min</span></div></div>
+            <div class="f"><label for="c_post">Post-processing (unit)</label>
+              <div class="inp"><input type="number" id="c_post" value="10" min="0" step="5"><span class="suf">min</span></div></div>
+            <div class="f"><label for="c_wage">Your rate</label>
+              <div class="inp"><span class="pre">€</span><input type="number" id="c_wage" value="35" min="0" step="5"><span class="suf">/h</span></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Hardware &amp; packaging <span class="note">pulled from Supplies</span></h2>
+          <div class="row">
+            <div class="f"><label for="c_supPick">Add an item</label>
+              <div class="inp"><select id="c_supPick"></select></div></div>
+            <div class="f"><label for="c_supQty">Qty per unit</label>
+              <div class="inp"><input type="number" id="c_supQty" value="1" min="0" step="1"><span class="suf">×</span></div></div>
+            <div class="f wide"><button class="btn ghost" type="button" id="c_supAdd">Add to this job</button></div>
+          </div>
+          <div class="list" id="c_supList"></div>
+          <div class="row three" style="margin-top:14px">
+            <div class="f"><label for="c_extraHw">Loose hardware</label>
+              <div class="inp"><span class="pre">€</span><input type="number" id="c_extraHw" value="0" min="0" step="0.25"></div></div>
+            <div class="f"><label for="c_pack">Packaging</label>
+              <div class="inp"><span class="pre">€</span><input type="number" id="c_pack" value="0" min="0" step="0.25"></div></div>
+            <div class="f"><label for="c_ship">Shipping</label>
+              <div class="inp"><span class="pre">€</span><input type="number" id="c_ship" value="0" min="0" step="0.25"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="total">
+          <div class="lbl">Cost price per unit</div>
+          <div class="big" id="c_unit">€ 0,00</div>
+          <div class="meta">
+            <div>Batch cost<b id="c_batch">€ 0,00</b></div>
+            <div>Per gram<b id="c_pg">€ 0,00</b></div>
+            <div>Per print hour<b id="c_ph">€ 0,00</b></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Where the money goes</h2>
+          <div class="stack" id="c_stack"></div>
+          <div class="legend" id="c_legend"></div>
+        </div>
+
+        <div class="card">
+          <h2>Selling price <span class="note">per unit</span></h2>
+          <div class="ladder" id="c_ladder"></div>
+          <div class="row" style="margin-top:12px">
+            <div class="f"><label for="c_margin">Custom margin</label>
+              <div class="inp"><input type="number" id="c_margin" value="50" min="0" step="5"><span class="suf">%</span></div></div>
+            <div class="f"><label for="c_vat">VAT</label>
+              <div class="inp"><input type="number" id="c_vat" value="21" min="0" step="1"><span class="suf">%</span></div></div>
+          </div>
+          <div class="bar">
+            <button class="btn" type="button" id="c_toQuote">Save as quote</button>
+            <button class="btn ghost" type="button" id="c_toProduct">Save as product</button>
+            <button class="btn ghost" type="button" id="c_toMarket">Send to marketplace</button>
+          </div>
+          <div class="status" id="c_status"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= QUOTES ================= -->
+  <section class="page" id="page-quotes">
+    <div class="cols">
+      <div>
+        <div class="card">
+          <h2>Quote history <span class="note" id="q_count"></span></h2>
+          <div class="row" style="margin-bottom:12px">
+            <div class="f"><label for="q_filter">Status</label>
+              <div class="inp"><select id="q_filter">
+                <option value="">All</option><option value="draft">Draft</option><option value="sent">Sent</option>
+                <option value="accepted">Accepted</option><option value="paid">Paid</option><option value="lost">Lost</option>
+              </select></div></div>
+            <div class="f"><label>&nbsp;</label>
+              <button class="btn" type="button" id="q_new">Nieuwe lege offerte</button></div>
+          </div>
+          <div class="list" id="q_list"></div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <h2>Quote details</h2>
+          <div id="q_edit"><p class="empty">Pick a quote on the left, or price something in the calculator first.</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="card noprint" style="margin-top:16px" id="q_docCard" hidden>
+      <h2>Client document <span class="note">print or save as PDF</span></h2>
+      <div class="bar" style="margin:0 0 14px">
+        <button class="btn" type="button" id="q_print">Print / save as PDF</button>
+        <button class="btn ghost" type="button" id="q_copy">Copy as text</button>
+      </div>
+    </div>
+    <div id="printArea"></div>
+  </section>
+
+  <!-- ================= PRODUCTS ================= -->
+  <section class="page" id="page-products">
+    <div class="cols">
+      <div class="card">
+        <h2>Product catalogue <span class="note">costs follow your current prices</span></h2>
+        <div class="list" id="p_list"></div>
+      </div>
+      <div class="card">
+        <h2 id="p_formTitle">New product</h2>
+        <div class="row">
+          <div class="f wide"><label for="p_name">Name</label><div class="inp"><input type="text" id="p_name" placeholder="Desk cable clip"></div></div>
+          <div class="f"><label for="p_sku">SKU</label><div class="inp"><input type="text" id="p_sku" placeholder="CLIP-01"></div></div>
+          <div class="f"><label for="p_margin">Target margin</label><div class="inp"><input type="number" id="p_margin" value="60" min="0" step="5"><span class="suf">%</span></div></div>
+          <div class="f wide"><label for="p_filament">Filament</label><div class="inp"><select id="p_filament"></select></div></div>
+          <div class="f"><label for="p_grams">Weight</label><div class="inp"><input type="number" id="p_grams" value="30" min="0" step="1"><span class="suf">g</span></div></div>
+          <div class="f"><label for="p_printer">Printer</label><div class="inp"><select id="p_printer"></select></div></div>
+          <div class="f"><label for="p_hrs">Print time</label><div class="inp"><input type="number" id="p_hrs" value="1" min="0" step="1"><span class="suf">h</span></div></div>
+          <div class="f"><label for="p_mins">&nbsp;</label><div class="inp"><input type="number" id="p_mins" value="30" min="0" step="1"><span class="suf">min</span></div></div>
+          <div class="f"><label for="p_post">Post-processing (per stuk)</label><div class="inp"><input type="number" id="p_post" value="5" min="0" step="1"><span class="suf">min</span></div></div>
+          <div class="f"><label for="p_extras">Hardware + packaging</label><div class="inp"><span class="pre">€</span><input type="number" id="p_extras" value="0" min="0" step="0.25"></div></div>
+          <div class="f"><label for="p_setup">Prep &amp; setup (per batch)</label><div class="inp"><input type="number" id="p_setup" value="0" min="0" step="1"><span class="suf">min</span></div></div>
+          <div class="f"><label for="p_batch">Batchgrootte</label><div class="inp"><input type="number" id="p_batch" value="1" min="1" step="1"><span class="suf">pcs</span></div></div>
+          <div class="f"><label for="p_waste">Purge / prime</label><div class="inp"><input type="number" id="p_waste" value="3" min="0" step="1"><span class="suf">%</span></div></div>
+          <div class="f"><label for="p_fail">Uitval</label><div class="inp"><input type="number" id="p_fail" value="8" min="0" step="1"><span class="suf">%</span></div></div>
+          <div class="f"><label for="p_rate">Machinetarief</label><div class="inp"><span class="pre">€</span><input type="number" id="p_rate" placeholder="volgt printer" min="0" step="0.05"><span class="suf">/h</span></div></div>
+          <div class="f"><label for="p_watts">Opgenomen vermogen</label><div class="inp"><input type="number" id="p_watts" placeholder="volgt printer" min="0" step="5"><span class="suf">W</span></div></div>
+          <div class="f wide"><label for="p_channel">Listed on</label><div class="inp"><input type="text" id="p_channel" placeholder="Etsy · Shopify · market stall"></div></div>
+          <div class="f wide"><label for="p_listPrice">Current listing price (incl. fees you charge)</label><div class="inp"><span class="pre">€</span><input type="number" id="p_listPrice" value="0" min="0" step="0.5"></div></div>
+        </div>
+        <div class="legend" id="p_preview" style="margin-top:14px"></div>
+        <div class="bar">
+          <button class="btn" type="button" id="p_save">Save product</button>
+          <button class="btn ghost" type="button" id="p_clear">Clear form</button>
+        </div>
+        <div class="status" id="p_status"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FILAMENTS ================= -->
+  <section class="page" id="page-filaments">
+    <div class="cols">
+      <div class="card">
+        <h2>Filament library <span class="note" id="f_stockNote"></span></h2>
+        <div class="list" id="f_list"></div>
+      </div>
+      <div class="card">
+        <h2 id="f_formTitle">New spool</h2>
+        <div class="row">
+          <div class="f"><label for="f_brand">Brand</label><div class="inp"><input type="text" id="f_brand" placeholder="Bambu Lab"></div></div>
+          <div class="f"><label for="f_material">Material</label><div class="inp"><input type="text" id="f_material" placeholder="PETG"></div></div>
+          <div class="f"><label for="f_colorName">Colour</label><div class="inp"><input type="text" id="f_colorName" placeholder="Matte black"></div></div>
+          <div class="f"><label for="f_color">Swatch</label><div class="inp"><input type="color" id="f_color" value="#1B45D6"></div></div>
+          <div class="f"><label for="f_price">Spool price</label><div class="inp"><span class="pre">€</span><input type="number" id="f_price" value="22" min="0" step="0.5"></div></div>
+          <div class="f"><label for="f_weight">Spool contents</label><div class="inp"><input type="number" id="f_weight" value="1000" min="1" step="50"><span class="suf">g</span></div></div>
+          <div class="f"><label for="f_stock">In stock</label><div class="inp"><input type="number" id="f_stock" value="1000" min="0" step="50"><span class="suf">g</span></div></div>
+          <div class="f"><label for="f_low">Alert below</label><div class="inp"><input type="number" id="f_low" value="200" min="0" step="50"><span class="suf">g</span></div></div>
+          <div class="f"><label for="f_supplier">Leverancier / batch</label><div class="inp"><input type="text" id="f_supplier" placeholder="123-3D · batch 0426"></div></div>
+          <div class="f"><label for="f_sku">Artikelnummer</label><div class="inp"><input type="text" id="f_sku" placeholder="30503"></div></div>
+          <div class="f wide"><label for="f_url">Bestellink</label><div class="inp"><input type="text" id="f_url" placeholder="https://..."></div></div>
+        </div>
+        <div class="bar">
+          <button class="btn" type="button" id="f_save">Save spool</button>
+          <button class="btn ghost" type="button" id="f_clear">Clear form</button>
+        </div>
+        <div class="status" id="f_status"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PRINTERS ================= -->
+  <section class="page" id="page-printers">
+    <div class="cols">
+      <div class="card">
+        <h2>Machines <span class="note">hourly rate = depreciation + upkeep</span></h2>
+        <div class="list" id="m_list"></div>
+      </div>
+      <div class="card">
+        <h2 id="m_formTitle">New printer profile</h2>
+        <div class="row">
+          <div class="f wide"><label for="m_name">Name</label><div class="inp"><input type="text" id="m_name" placeholder="Bambu X1C"></div></div>
+          <div class="f"><label for="m_tech">Process</label><div class="inp"><select id="m_tech"><option value="fdm">FDM · filament</option><option value="sla">SLA · resin</option></select></div></div>
+          <div class="f"><label for="m_watts">Average draw</label><div class="inp"><input type="number" id="m_watts" value="110" min="0" step="5"><span class="suf">W</span></div></div>
+          <div class="f"><label for="m_price">Machine + upgrades</label><div class="inp"><span class="pre">€</span><input type="number" id="m_price" value="900" min="0" step="50"></div></div>
+          <div class="f"><label for="m_life">Expected life</label><div class="inp"><input type="number" id="m_life" value="4000" min="1" step="100"><span class="suf">h</span></div></div>
+          <div class="f"><label for="m_maint">Upkeep per year</label><div class="inp"><span class="pre">€</span><input type="number" id="m_maint" value="120" min="0" step="10"></div></div>
+          <div class="f"><label for="m_hours">Print hours per year</label><div class="inp"><input type="number" id="m_hours" value="700" min="1" step="50"><span class="suf">h</span></div></div>
+          <div class="f wide"><label for="m_override">Override hourly rate <span class="derived" id="m_calcRate"></span></label>
+            <div class="inp"><span class="pre">€</span><input type="number" id="m_override" placeholder="auto" min="0" step="0.05"><span class="suf">/h</span></div></div>
+        </div>
+        <div class="bar">
+          <button class="btn" type="button" id="m_save">Save printer</button>
+          <button class="btn ghost" type="button" id="m_clear">Clear form</button>
+        </div>
+        <div class="status" id="m_status"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SUPPLIES ================= -->
+  <section class="page" id="page-supplies">
+    <div class="cols">
+      <div class="card">
+        <h2>Hardware &amp; packaging <span class="note" id="s_lowNote"></span></h2>
+        <div class="list" id="s_list"></div>
+      </div>
+      <div class="card">
+        <h2 id="s_formTitle">New item</h2>
+        <div class="row">
+          <div class="f wide"><label for="s_name">Name</label><div class="inp"><input type="text" id="s_name" placeholder="M3×8 heat-set insert"></div></div>
+          <div class="f"><label for="s_type">Kind</label><div class="inp"><select id="s_type">
+            <option value="hardware">Hardware</option><option value="packaging">Packaging</option></select></div></div>
+          <div class="f"><label for="s_cost">Cost per unit</label><div class="inp"><span class="pre">€</span><input type="number" id="s_cost" value="0.08" min="0" step="0.01"></div></div>
+          <div class="f"><label for="s_stock">In stock</label><div class="inp"><input type="number" id="s_stock" value="100" min="0" step="1"><span class="suf">pcs</span></div></div>
+          <div class="f"><label for="s_low">Alert below</label><div class="inp"><input type="number" id="s_low" value="20" min="0" step="1"><span class="suf">pcs</span></div></div>
+          <div class="f"><label for="s_supplier">Leverancier</label><div class="inp"><input type="text" id="s_supplier" placeholder="123-3D"></div></div>
+          <div class="f"><label for="s_sku">Artikelnummer</label><div class="inp"><input type="text" id="s_sku" placeholder="M3-INS-8"></div></div>
+          <div class="f wide"><label for="s_url">Bestellink</label><div class="inp"><input type="text" id="s_url" placeholder="https://..."></div></div>
+        </div>
+        <div class="bar">
+          <button class="btn" type="button" id="s_save">Save item</button>
+          <button class="btn ghost" type="button" id="s_clear">Clear form</button>
+        </div>
+        <div class="status" id="s_status"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= MARKETPLACE ================= -->
+  <section class="page" id="page-market">
+    <div class="cols">
+      <div>
+        <div class="card">
+          <h2>Channel <span class="note">every fee, before you list</span></h2>
+          <div class="row three">
+            <div class="f wide"><label for="k_preset">Marketplace</label><div class="inp"><select id="k_preset"></select></div></div>
+            <div class="f"><label for="k_listing">Listing fee</label><div class="inp"><span class="pre">€</span><input type="number" id="k_listing" value="0.18" min="0" step="0.01"></div></div>
+            <div class="f"><label for="k_trans">Transaction fee</label><div class="inp"><input type="number" id="k_trans" value="6.5" min="0" step="0.1"><span class="suf">%</span></div></div>
+            <div class="f"><label for="k_payPct">Payment %</label><div class="inp"><input type="number" id="k_payPct" value="4" min="0" step="0.1"><span class="suf">%</span></div></div>
+            <div class="f"><label for="k_payFix">Payment fixed</label><div class="inp"><span class="pre">€</span><input type="number" id="k_payFix" value="0.30" min="0" step="0.05"></div></div>
+            <div class="f"><label for="k_ads">Offsite ads</label><div class="inp"><input type="number" id="k_ads" value="0" min="0" step="1"><span class="suf">%</span></div></div>
+          </div>
+          <div class="row three" style="margin-top:12px">
+            <div class="f wide"><label>BTW-situatie</label>
+              <div class="seg" id="k_vatmode">
+                <button type="button" data-mode="incl" aria-pressed="true">BTW-plichtig</button>
+                <button type="button" data-mode="none" aria-pressed="false">KOR / vrijgesteld</button>
+              </div></div>
+            <div class="f"><label for="k_vat">BTW-tarief</label>
+              <div class="inp"><input type="number" id="k_vat" value="21" min="0" step="1"><span class="suf">%</span></div></div>
+          </div>
+          <p class="hint">Etsy rekent de transactiekosten ook over de verzendkosten die je de koper in rekening brengt — dat zit hieronder verwerkt.</p>
+          <p class="hint" id="k_vatHint"></p>
+          <p class="hint">NL-tarieven (aug 2026): 6,5% transactiekosten, betalingsverwerking 4% + €0,30 (EU-tarief, niet het Amerikaanse 3% + $0,25), listing $0,20 ≈ €0,18 per verkocht artikel. Controleer ze bij een prijswijziging — alle velden zijn aanpasbaar.</p>
+        </div>
+        <div class="card">
+          <h2>Your listing</h2>
+          <div class="row three">
+            <div class="f wide"><label for="k_product">Start from a product</label><div class="inp"><select id="k_product"></select></div></div>
+            <div class="f"><label for="k_cost">Cost price per unit</label><div class="inp"><span class="pre">€</span><input type="number" id="k_cost" value="6" min="0" step="0.25"></div></div>
+            <div class="f"><label for="k_price">Listing price</label><div class="inp"><span class="pre">€</span><input type="number" id="k_price" value="19.95" min="0" step="0.5"></div></div>
+            <div class="f"><label for="k_shipCharged">Shipping billed</label><div class="inp"><span class="pre">€</span><input type="number" id="k_shipCharged" value="4.95" min="0" step="0.25"></div></div>
+            <div class="f"><label for="k_shipReal">Shipping actual</label><div class="inp"><span class="pre">€</span><input type="number" id="k_shipReal" value="4.95" min="0" step="0.25"></div></div>
+            <div class="f"><label for="k_target">Target profit</label><div class="inp"><span class="pre">€</span><input type="number" id="k_target" value="8" min="0" step="0.5"></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Maandscenario <span class="note">volume en machinecapaciteit</span></h2>
+          <div class="row three">
+            <div class="f"><label for="k_volume">Verkopen per maand</label>
+              <div class="inp"><input type="number" id="k_volume" value="20" min="0" step="1"><span class="suf">st</span></div></div>
+            <div class="f"><label for="k_hoursPer">Printtijd per stuk</label>
+              <div class="inp"><input type="number" id="k_hoursPer" value="6.33" min="0" step="0.25"><span class="suf">h</span></div></div>
+            <div class="f"><label for="k_capacity">Beschikbare printeruren</label>
+              <div class="inp"><input type="number" id="k_capacity" value="200" min="1" step="10"><span class="suf">h/mnd</span></div></div>
+          </div>
+          <div class="legend" id="k_month" style="margin-top:4px"></div>
+          <div class="barchart" id="k_load" style="margin-top:14px"></div>
+          <p class="hint" id="k_loadNote"></p>
+        </div>
+      </div>
+      <div>
+        <div class="total">
+          <div class="lbl">Take-home profit per sale</div>
+          <div class="big" id="k_profit">€ 0,00</div>
+          <div class="meta">
+            <div>Margin<b id="k_margin">0%</b></div>
+            <div>Total fees<b id="k_fees">€ 0,00</b></div>
+            <div>Fees as % of price<b id="k_feePct">0%</b></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Fee breakdown</h2>
+          <div class="stack" id="k_stack"></div>
+          <div class="legend" id="k_legend"></div>
+        </div>
+        <div class="card">
+          <h2>To hit your target</h2>
+          <div class="ladder" id="k_reverse"></div>
+        </div>
+        <div class="card">
+          <h2>Kanalen vergeleken <span class="note">zelfde prijs en kostprijs</span></h2>
+          <div class="barchart" id="k_compare"></div>
+          <p class="hint">Dezelfde vraagprijs op elk kanaal. Een marktkraam kent geen fees, maar wel een standgeld dat je bij Events bijhoudt.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= EVENTS ================= -->
+  <section class="page" id="page-events">
+    <div class="cols">
+      <div class="card">
+        <h2>Markets &amp; craft fairs <span class="note" id="e_note"></span></h2>
+        <div class="list" id="e_list"></div>
+      </div>
+      <div class="card">
+        <h2 id="e_formTitle">New event</h2>
+        <div class="row">
+          <div class="f wide"><label for="e_name">Event</label><div class="inp"><input type="text" id="e_name" placeholder="Kerstmarkt Middelburg"></div></div>
+          <div class="f"><label for="e_date">Date</label><div class="inp"><input type="date" id="e_date"></div></div>
+          <div class="f"><label for="e_status">Status</label><div class="inp"><select id="e_status">
+            <option value="applied">Applied</option><option value="confirmed">Confirmed</option>
+            <option value="done">Done</option><option value="cancelled">Cancelled</option></select></div></div>
+          <div class="f"><label for="e_deadline">Application deadline</label><div class="inp"><input type="date" id="e_deadline"></div></div>
+          <div class="f"><label for="e_booth">Booth fee</label><div class="inp"><span class="pre">€</span><input type="number" id="e_booth" value="45" min="0" step="5"></div></div>
+          <div class="f"><label for="e_travel">Travel</label><div class="inp"><span class="pre">€</span><input type="number" id="e_travel" value="20" min="0" step="5"></div></div>
+          <div class="f"><label for="e_other">Other costs</label><div class="inp"><span class="pre">€</span><input type="number" id="e_other" value="0" min="0" step="5"></div></div>
+          <div class="f"><label for="e_stockCost">Cost of stock sold</label><div class="inp"><span class="pre">€</span><input type="number" id="e_stockCost" value="0" min="0" step="5"></div></div>
+          <div class="f"><label for="e_revenue">Revenue</label><div class="inp"><span class="pre">€</span><input type="number" id="e_revenue" value="0" min="0" step="5"></div></div>
+          <div class="f"><label for="e_hours">Hours spent</label><div class="inp"><input type="number" id="e_hours" value="8" min="0" step="1"><span class="suf">h</span></div></div>
+          <div class="f wide"><label for="e_notes">Notes</label><div class="inp"><textarea id="e_notes" placeholder="Pitch 12, load-in from 07:00"></textarea></div></div>
+        </div>
+        <div class="bar">
+          <button class="btn" type="button" id="e_save">Save event</button>
+          <button class="btn ghost" type="button" id="e_clear">Clear form</button>
+        </div>
+        <div class="status" id="e_status_msg"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= INSIGHTS ================= -->
+  <section class="page" id="page-insights">
+    <div class="kpis" id="i_kpis"></div>
+    <div class="cols even" style="margin-top:16px">
+      <div class="card">
+        <h2>Quote pipeline</h2>
+        <div class="barchart" id="i_pipeline"></div>
+        <p class="hint" id="i_accept"></p>
+      </div>
+      <div class="card">
+        <h2>Rendement per product</h2>
+        <div class="seg" id="i_rankmode" style="margin-bottom:14px">
+          <button type="button" data-mode="hour" aria-pressed="true">€ per printeruur</button>
+          <button type="button" data-mode="margin" aria-pressed="false">Marge %</button>
+          <button type="button" data-mode="unit" aria-pressed="false">€ per stuk</button>
+        </div>
+        <div class="barchart" id="i_products"></div>
+        <p class="hint" id="i_ranknote"></p>
+      </div>
+    </div>
+    <div class="cols even" style="margin-top:16px">
+      <div class="card">
+        <h2>Event return</h2>
+        <div class="barchart" id="i_events"></div>
+      </div>
+      <div class="card">
+        <h2>Stock warnings</h2>
+        <div class="list" id="i_warn"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SETTINGS ================= -->
+  <section class="page" id="page-settings">
+    <div class="cols even">
+      <div class="card">
+        <h2>Your business <span class="note">appears on quote documents</span></h2>
+        <div class="row">
+          <div class="f wide"><label for="b_name">Business name</label><div class="inp"><input type="text" id="b_name" placeholder="Caljouw 3D"></div></div>
+          <div class="f wide"><label for="b_tagline">Tagline</label><div class="inp"><input type="text" id="b_tagline" placeholder="Functional prints, Zeeland"></div></div>
+          <div class="f"><label for="b_email">Email</label><div class="inp"><input type="text" id="b_email"></div></div>
+          <div class="f"><label for="b_phone">Phone</label><div class="inp"><input type="text" id="b_phone"></div></div>
+          <div class="f wide"><label for="b_address">Address</label><div class="inp"><input type="text" id="b_address"></div></div>
+          <div class="f"><label for="b_vatno">VAT number</label><div class="inp"><input type="text" id="b_vatno" placeholder="NL..."></div></div>
+          <div class="f"><label for="b_accent">Accent colour</label><div class="inp"><input type="color" id="b_accent" value="#1B45D6"></div></div>
+          <div class="f wide"><label for="b_logoFile">Logo <span class="note" id="b_logoNote"></span></label>
+            <div class="inp"><input type="file" id="b_logoFile" accept="image/png,image/jpeg,image/svg+xml,image/webp"></div></div>
+          <div class="f wide" id="b_logoRow" hidden>
+            <div style="display:flex;align-items:center;gap:14px;border:1px solid var(--line);padding:10px">
+              <img id="b_logoPrev" alt="Logo preview" style="max-height:52px;max-width:180px">
+              <button class="btn ghost sm" type="button" id="b_logoDel">Remove logo</button>
+            </div>
+          </div>
+          <div class="f wide"><label for="b_terms">Offertevoorwaarden (NL)</label><div class="inp"><textarea id="b_terms" placeholder="Geldig 30 dagen. 50% vooruit bij orders boven €250."></textarea></div></div>
+          <div class="f wide"><label for="b_termsEn">Quote terms (EN)</label><div class="inp"><textarea id="b_termsEn" placeholder="Valid 30 days. 50% up front on orders above €250."></textarea></div></div>
+          <div class="f wide"><label for="b_quoteLang">Standaardtaal voor nieuwe offertes</label>
+            <div class="inp"><select id="b_quoteLang"><option value="nl">Nederlands</option><option value="en">English</option></select></div></div>
+        </div>
+        <p class="hint">Saved as you type — the quote document updates with it.</p>
+        <div class="status" id="b_status2"></div>
+      </div>
+      <div>
+        <div class="card">
+          <h2>Defaults</h2>
+          <div class="row">
+            <div class="f"><label for="d_kwh">Electricity tariff</label><div class="inp"><span class="pre">€</span><input type="number" id="d_kwh" value="0.30" min="0" step="0.01"><span class="suf">/kWh</span></div></div>
+            <div class="f"><label for="d_wage">Your hourly rate</label><div class="inp"><span class="pre">€</span><input type="number" id="d_wage" value="35" min="0" step="5"></div></div>
+            <div class="f"><label for="d_vat">VAT</label><div class="inp"><input type="number" id="d_vat" value="21" min="0" step="1"><span class="suf">%</span></div></div>
+            <div class="f"><label for="d_margin">Default margin</label><div class="inp"><input type="number" id="d_margin" value="40" min="0" step="5"><span class="suf">%</span></div></div>
+            <div class="f"><label for="d_fail">Failure allowance</label><div class="inp"><input type="number" id="d_fail" value="8" min="0" step="1"><span class="suf">%</span></div></div>
+            <div class="f"><label for="d_waste">Purge / prime</label><div class="inp"><input type="number" id="d_waste" value="3" min="0" step="1"><span class="suf">%</span></div></div>
+          </div>
+          <div class="bar"><button class="btn ghost" type="button" id="b_save">Save now</button></div>
+          <p class="hint" style="margin-top:0">These save as you type too.</p>
+          <div class="status" id="b_status"></div>
+        </div>
+        <div class="card">
+          <h2>Your data</h2>
+          <p class="hint" style="margin-top:0">Everything is in the SQLite file shown at the top of the page. Open it any time in DB Browser for SQLite, or query it below. The JSON export is a second belt-and-braces backup, and the way to bring data in from the earlier version of this tool.</p>
+          <div class="bar">
+            <button class="btn ghost" type="button" id="x_export">Export as JSON</button>
+            <button class="btn danger" type="button" id="x_reset">Reset everything</button>
+          </div>
+          <div class="f wide" style="margin-top:12px"><label for="x_import">Paste an export to restore</label>
+            <div class="inp"><textarea id="x_import" placeholder='{"filaments":[...]}'></textarea></div></div>
+          <div class="bar"><button class="btn ghost" type="button" id="x_importBtn">Restore from JSON</button></div>
+          <div class="status" id="x_status"></div>
+        </div>
+        <div class="card">
+          <h2>SQL console <span class="note">read-only queries</span></h2>
+          <div class="f wide"><label for="sqlq">Query</label>
+            <div class="inp"><textarea id="sqlq">SELECT brand, material, colorName,
+       ROUND(perGram*1000,2) AS eur_per_kg,
+       stock AS grams_left,
+       ROUND(stockValue,2) AS value_on_shelf
+FROM v_filament_cost
+ORDER BY value_on_shelf DESC;</textarea></div></div>
+          <div class="bar"><button class="btn ghost" type="button" id="sqlrun">Run query</button></div>
+          <div id="sqlout" style="overflow-x:auto"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</div>
+
+<div class="gate" id="gate" hidden>
+  <div class="box">
+    <h3>Where should your data live?</h3>
+    <p>This app keeps everything in a single SQLite file that you own. Pick one to start.</p>
+    <div class="warnbox" id="gateWarn" hidden></div>
+    <div class="opt">
+      <div>Create a new database<small>Choose a folder — your iCloud or backup folder is a good home.</small></div>
+      <button class="btn" type="button" id="gate_new">Create</button>
+    </div>
+    <div class="opt">
+      <div>Open an existing one<small>Any <code>.sqlite</code> file this app made.</small></div>
+      <button class="btn ghost" type="button" id="gate_open">Open</button>
+    </div>
+    <div class="opt" id="gate_tempRow">
+      <div>Just try it out<small>Nothing is written to disk. Use “Save a copy” before you close the tab.</small></div>
+      <button class="btn ghost" type="button" id="gate_temp">Work in memory</button>
+    </div>
+  </div>
+</div>
+
+<script src="./vendor/sql-wasm.js"></script>
+<script>
+/* Fall back to a CDN copy if the vendor folder is missing (e.g. previewing this
+   file outside its own folder). Local file wins when it is there. */
+if(typeof initSqlJs === 'undefined'){
+  document.write('<scr'+'ipt src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></scr'+'ipt>');
+}
+</script>
+
+<script>
+(function(){
+const $ = id => document.getElementById(id);
+const nf = new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR'});
+const eur = v => nf.format(isFinite(v)?v:0);
+const pct = v => (isFinite(v)?v:0).toFixed(0)+'%';
+const num = id => { const v = parseFloat($(id).value); return isFinite(v)?v:0; };
+const val = id => $(id).value.trim();
+/* Leeg veld = geen overschrijving; volg dan het printerprofiel. */
+const blank = id => { const v=$(id).value.trim(); return v===''?null:parseFloat(v); };
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* Alleen http en https als link tonen. Een url uit een JSON-import mag geen
+   javascript: of data: schema binnensmokkelen. */
+function safeUrl(u){
+  const s=String(u||'').trim();
+  if(!s) return '';
+  try{
+    const p=new URL(s, window.location.href);
+    return (p.protocol==='http:'||p.protocol==='https:') ? p.href : '';
+  }catch(e){ return ''; }
+}
+const uid = () => 'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+
+/* ---------------- state ---------------- */
+let DB = {
+  settings:{business:{name:'',tagline:'',email:'',phone:'',address:'',vatno:'',accent:'#1B45D6',terms:'',logo:''},
+            kwh:0.30, wage:35, vat:21, margin:40, fail:8, waste:3, quoteLang:'nl'},
+  printers:[], filaments:[], supplies:[], products:[], quotes:[], events:[], quoteSeq:1
+};
+let editing = {f:null,m:null,s:null,p:null,e:null};
+let jobSupplies = [];      // [{id,qty}]
+let chosenMargin = 40;
+let activeQuote = null;
+let lastCalc = null;
+let saveTimer = null;
+
+/* =========================================================
+   SQLITE STORAGE
+   The database is a real .sqlite file on disk. sql.js keeps it in memory
+   while you work; every change is written back through a File System Access
+   handle. No server, no browser-locked storage.
+   ========================================================= */
+const SCHEMA = `
+PRAGMA foreign_keys = ON;
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS printers (
+  id TEXT PRIMARY KEY, name TEXT NOT NULL, tech TEXT NOT NULL DEFAULT 'fdm',
+  watts REAL DEFAULT 0, price REAL DEFAULT 0, life REAL DEFAULT 1,
+  maint REAL DEFAULT 0, hours REAL DEFAULT 1, override REAL
+);
+CREATE TABLE IF NOT EXISTS filaments (
+  id TEXT PRIMARY KEY, brand TEXT, material TEXT NOT NULL, colorName TEXT, color TEXT,
+  price REAL DEFAULT 0, weight REAL DEFAULT 1000, stock REAL DEFAULT 0,
+  low REAL DEFAULT 0, supplier TEXT, sku TEXT, url TEXT
+);
+CREATE TABLE IF NOT EXISTS supplies (
+  id TEXT PRIMARY KEY, name TEXT NOT NULL, type TEXT NOT NULL DEFAULT 'hardware',
+  cost REAL DEFAULT 0, stock REAL DEFAULT 0, low REAL DEFAULT 0, supplier TEXT,
+  sku TEXT, url TEXT
+);
+CREATE TABLE IF NOT EXISTS products (
+  id TEXT PRIMARY KEY, name TEXT NOT NULL, sku TEXT, margin REAL DEFAULT 0,
+  filamentId TEXT REFERENCES filaments(id) ON DELETE SET NULL,
+  printerId TEXT REFERENCES printers(id) ON DELETE SET NULL,
+  grams REAL DEFAULT 0, hrs REAL DEFAULT 0, mins REAL DEFAULT 0, post REAL DEFAULT 0,
+  extras REAL DEFAULT 0, channel TEXT, listPrice REAL DEFAULT 0,
+  setup REAL DEFAULT 0, batch REAL DEFAULT 1, waste REAL, fail REAL,
+  rate REAL, watts REAL
+);
+CREATE TABLE IF NOT EXISTS quotes (
+  id TEXT PRIMARY KEY, no TEXT, date TEXT, clientName TEXT, clientEmail TEXT,
+  status TEXT DEFAULT 'draft', notes TEXT, vat REAL DEFAULT 21, margin REAL DEFAULT 40, lang TEXT,
+  deducted INTEGER DEFAULT 0,
+  filamentId TEXT REFERENCES filaments(id) ON DELETE SET NULL,
+  grams REAL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS quote_lines (
+  quoteId TEXT NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+  seq INTEGER NOT NULL, name TEXT, qty REAL DEFAULT 1, cost REAL DEFAULT 0, price REAL DEFAULT 0,
+  productId TEXT, sku TEXT,
+  PRIMARY KEY (quoteId, seq)
+);
+CREATE TABLE IF NOT EXISTS quote_supplies (
+  quoteId TEXT NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+  supplyId TEXT NOT NULL, qty REAL DEFAULT 0,
+  PRIMARY KEY (quoteId, supplyId)
+);
+CREATE TABLE IF NOT EXISTS events (
+  id TEXT PRIMARY KEY, name TEXT NOT NULL, date TEXT, status TEXT, deadline TEXT,
+  booth REAL DEFAULT 0, travel REAL DEFAULT 0, other REAL DEFAULT 0, stockCost REAL DEFAULT 0,
+  revenue REAL DEFAULT 0, hours REAL DEFAULT 0, notes TEXT
+);
+CREATE VIEW IF NOT EXISTS v_filament_cost AS
+  SELECT id, brand, material, colorName, price/NULLIF(weight,0) AS perGram,
+         stock, stock*price/NULLIF(weight,0) AS stockValue
+  FROM filaments;
+`;
+
+/* Kolommen die later zijn toegevoegd. Een bestaande database mist ze,
+   dus voeg ze toe als ze er nog niet zijn. Faalt stil als ze er al staan. */
+const MIGRATIONS=[
+  'ALTER TABLE products ADD COLUMN setup REAL DEFAULT 0',
+  'ALTER TABLE products ADD COLUMN batch REAL DEFAULT 1',
+  'ALTER TABLE products ADD COLUMN waste REAL',
+  'ALTER TABLE products ADD COLUMN fail REAL',
+  'ALTER TABLE products ADD COLUMN rate REAL',
+  'ALTER TABLE products ADD COLUMN watts REAL',
+  'ALTER TABLE quote_lines ADD COLUMN productId TEXT',
+  'ALTER TABLE quote_lines ADD COLUMN sku TEXT',
+  'ALTER TABLE quotes ADD COLUMN lang TEXT',
+  'ALTER TABLE supplies ADD COLUMN sku TEXT',
+  'ALTER TABLE supplies ADD COLUMN url TEXT',
+  'ALTER TABLE filaments ADD COLUMN sku TEXT',
+  'ALTER TABLE filaments ADD COLUMN url TEXT'
+];
+function migrate(){
+  MIGRATIONS.forEach(sql=>{ try{ sqldb.run(sql); }catch(e){ /* kolom bestaat al */ } });
+}
+
+let SQL = null;      // sql.js module
+let sqldb = null;    // the in-memory database
+let fileHandle = null;
+let dbLabel = '';
+let dirty = false;
+let memoryOnly = false;
+
+/* Kept as 'printcosting' deliberately: this key holds the saved file handle.
+   Renaming it would make every existing install forget which .sqlite file
+   it was using and show the startup dialog again. Not worth the tidiness. */
+const IDB_NAME='printcosting', IDB_STORE='meta';
+function idb(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(IDB_NAME,1);
+    r.onupgradeneeded=()=>r.result.createObjectStore(IDB_STORE);
+    r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+  });
+}
+async function idbGet(k){
+  try{ const d=await idb(); return await new Promise((res,rej)=>{
+    const t=d.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(k);
+    t.onsuccess=()=>res(t.result); t.onerror=()=>rej(t.error); }); }
+  catch(e){ return undefined; }
+}
+async function idbSet(k,v){
+  try{ const d=await idb(); return await new Promise((res,rej)=>{
+    const t=d.transaction(IDB_STORE,'readwrite').objectStore(IDB_STORE).put(v,k);
+    t.onsuccess=()=>res(true); t.onerror=()=>rej(t.error); }); }
+  catch(e){ return false; }
+}
+
+const hasFS = typeof window.showSaveFilePicker === 'function';
+
+/* Server mode: the app is being served by its own storage backend
+   (Umbrel). The database lives there instead of on this machine.
+   Detected at boot; everything else in the app is unchanged. */
+let serverMode=false, serverVersion=null, serverStale=false;
+async function detectServer(){
+  try{
+    const r=await fetch('api/db/meta',{cache:'no-store'});
+    if(!r.ok) return null;
+    const j=await r.json();
+    if(!j || j.storage!=='umbrel') return null;
+    serverVersion=j.version;
+    return j;
+  }catch(e){ return null; }
+}
+
+function dbStatus(state,label,save){
+  const dot=$('dbdot');
+  dot.className='dbdot'+(state?' '+state:'');
+  if(label!=null) $('dbname').textContent=label;
+  if(save!=null) $('dbsave').textContent=save;
+}
+
+/* ---- writing the whole working set into SQL, in one transaction ---- */
+function run(sql,params){ sqldb.run(sql,params||[]); }
+function syncToSqlite(){
+  if(!sqldb) return;
+  run('BEGIN');
+  try{
+    ['settings','printers','filaments','supplies','products','quotes','quote_lines','quote_supplies','events']
+      .forEach(t=>run('DELETE FROM '+t));
+
+    const s=DB.settings;
+    const put=(k,v)=>run('INSERT INTO settings (key,value) VALUES (?,?)',[k,JSON.stringify(v)]);
+    put('business',s.business); put('kwh',s.kwh); put('wage',s.wage); put('vat',s.vat);
+    put('margin',s.margin); put('fail',s.fail); put('waste',s.waste); put('quoteSeq',DB.quoteSeq);
+
+    DB.printers.forEach(p=>run(
+      'INSERT INTO printers (id,name,tech,watts,price,life,maint,hours,override) VALUES (?,?,?,?,?,?,?,?,?)',
+      [p.id,p.name,p.tech,p.watts,p.price,p.life,p.maint,p.hours,(p.override==null||p.override==='')?null:+p.override]));
+    DB.filaments.forEach(f=>run(
+      'INSERT INTO filaments (id,brand,material,colorName,color,price,weight,stock,low,supplier,sku,url) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+      [f.id,f.brand,f.material,f.colorName,f.color,f.price,f.weight,f.stock,f.low,f.supplier||'',f.sku||'',f.url||'']));
+    DB.supplies.forEach(x=>run(
+      'INSERT INTO supplies (id,name,type,cost,stock,low,supplier,sku,url) VALUES (?,?,?,?,?,?,?,?,?)',
+      [x.id,x.name,x.type,x.cost,x.stock,x.low,x.supplier||'',x.sku||'',x.url||'']));
+    DB.products.forEach(p=>run(
+      'INSERT INTO products (id,name,sku,margin,filamentId,printerId,grams,hrs,mins,post,extras,channel,listPrice,setup,batch,waste,fail,rate,watts) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+      [p.id,p.name,p.sku||'',p.margin,fkF(p.filamentId),fkM(p.printerId),p.grams,p.hrs,p.mins,p.post,p.extras,p.channel||'',p.listPrice||0,
+       p.setup||0,p.batch||1,(p.waste==null?null:p.waste),(p.fail==null?null:p.fail),
+       (p.rate==null?null:p.rate),(p.watts==null?null:p.watts)]));
+    DB.quotes.forEach(q=>{
+      run('INSERT INTO quotes (id,no,date,clientName,clientEmail,status,notes,vat,margin,deducted,filamentId,grams,lang) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        [q.id,q.no,q.date,q.client.name||'',q.client.email||'',q.status,q.notes||'',q.vat,q.margin,q.deducted?1:0,fkF(q.filamentId),q.grams||0,q.lang||'nl']);
+      q.lines.forEach((l,i)=>run('INSERT INTO quote_lines (quoteId,seq,name,qty,cost,price,productId,sku) VALUES (?,?,?,?,?,?,?,?)',
+        [q.id,i,l.name,l.qty,l.cost,l.price,l.productId||null,l.sku||'']));
+      (q.supplies||[]).forEach(js=>run('INSERT OR REPLACE INTO quote_supplies (quoteId,supplyId,qty) VALUES (?,?,?)',
+        [q.id,js.id,js.qty]));
+    });
+    DB.events.forEach(e=>run(
+      'INSERT INTO events (id,name,date,status,deadline,booth,travel,other,stockCost,revenue,hours,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+      [e.id,e.name,e.date||'',e.status,e.deadline||'',e.booth,e.travel,e.other,e.stockCost,e.revenue,e.hours,e.notes||'']));
+    run('COMMIT');
+  }catch(err){ try{ run('ROLLBACK'); }catch(e2){} throw err; }
+}
+const fkF = id => DB.filaments.some(f=>f.id===id) ? id : null;
+const fkM = id => DB.printers.some(p=>p.id===id) ? id : null;
+
+/* ---- reading the file back into the working set ---- */
+function rows(sql){
+  const out=[]; const st=sqldb.prepare(sql);
+  while(st.step()) out.push(st.getAsObject());
+  st.free(); return out;
+}
+function loadFromSqlite(){
+  const s={business:{name:'',tagline:'',email:'',phone:'',address:'',vatno:'',accent:'#1B45D6',terms:'',logo:''},
+           kwh:0.30,wage:35,vat:21,margin:40,fail:8,waste:3,quoteLang:'nl'};
+  let seq=1;
+  rows('SELECT key,value FROM settings').forEach(r=>{
+    let v; try{ v=JSON.parse(r.value); }catch(e){ v=r.value; }
+    if(r.key==='quoteSeq') seq=v; else if(r.key==='business') s.business=Object.assign(s.business,v||{});
+    else s[r.key]=v;
+  });
+  DB.settings=s; DB.quoteSeq=seq||1;
+  DB.printers=rows('SELECT * FROM printers ORDER BY name');
+  DB.filaments=rows('SELECT * FROM filaments ORDER BY brand,material');
+  DB.supplies=rows('SELECT * FROM supplies ORDER BY name');
+  DB.products=rows('SELECT * FROM products ORDER BY name');
+  DB.events=rows('SELECT * FROM events');
+  const lines=rows('SELECT * FROM quote_lines ORDER BY quoteId,seq');
+  const qsup=rows('SELECT * FROM quote_supplies');
+  DB.quotes=rows('SELECT * FROM quotes ORDER BY date DESC, no DESC').map(q=>({
+    id:q.id,no:q.no,date:q.date,client:{name:q.clientName||'',email:q.clientEmail||''},
+    status:q.status,notes:q.notes||'',vat:q.vat,margin:q.margin,deducted:!!q.deducted,lang:q.lang||'nl',
+    filamentId:q.filamentId,grams:q.grams,
+    lines:lines.filter(l=>l.quoteId===q.id).map(l=>({name:l.name,qty:l.qty,cost:l.cost,price:l.price,
+      productId:l.productId||null, sku:l.sku||''})),
+    supplies:qsup.filter(x=>x.quoteId===q.id).map(x=>({id:x.supplyId,qty:x.qty}))
+  }));
+}
+
+/* ---- persist: sync to SQL, then write the file ---- */
+function persist(msg,el){
+  dirty=true;
+  try{ syncToSqlite(); }
+  catch(err){ dbStatus('err',null,'Write failed — see console'); console.error(err); return; }
+  if(memoryOnly){ dbStatus('warn',null,'In memory only — save a copy'); return; }
+  dbStatus('warn',null,'Saving…');
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(writeFile,400);
+  if(msg&&el) note(el,msg);
+}
+async function writeFile(){
+  if(!sqldb) return;
+  const bytes=sqldb.export();
+
+  if(serverMode){
+    if(serverStale){ dbStatus('err',null,'Elders gewijzigd — herlaad de pagina'); return; }
+    try{
+      const r=await fetch('api/db',{method:'PUT',
+        headers:{'Content-Type':'application/octet-stream','If-Match':String(serverVersion==null?'':serverVersion)},
+        body:bytes});
+      if(r.status===409){
+        serverStale=true;
+        dbStatus('err',null,'Elders gewijzigd — herlaad voordat je verder werkt');
+        return;
+      }
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const j=await r.json();
+      serverVersion=j.version; dirty=false;
+      dbStatus('ok',null,'Opgeslagen op Umbrel — '+new Date().toLocaleTimeString('nl-NL'));
+    }catch(err){
+      console.error(err);
+      dbStatus('err',null,'Umbrel niet bereikbaar — wijzigingen staan alleen in dit venster');
+    }
+    return;
+  }
+
+  try{
+    if(fileHandle){
+      const w=await fileHandle.createWritable();
+      await w.write(bytes); await w.close();
+    } else {
+      await idbSet('fallbackDb',bytes);   // Safari / no File System Access
+    }
+    dirty=false;
+    dbStatus('ok',null,'Saved '+new Date().toLocaleTimeString('nl-NL'));
+  }catch(err){
+    console.error(err);
+    dbStatus('err',null,'Could not write the file — use “Save a copy”');
+  }
+}
+function note(el,msg){ const n=$(el); if(!n) return; n.textContent=msg; setTimeout(()=>{ if(n.textContent===msg) n.textContent=''; },4000); }
+
+/* ---------------- seed ---------------- */
+function seed(){
+  DB.printers.push({id:uid(),name:'Generic FDM printer',tech:'fdm',watts:110,price:900,life:4000,maint:120,hours:700,override:null});
+  DB.filaments.push({id:uid(),brand:'Generic',material:'PLA',colorName:'Black',color:'#14161A',price:22,weight:1000,stock:1000,low:200,supplier:''});
+  DB.filaments.push({id:uid(),brand:'Generic',material:'PETG',colorName:'Natural',color:'#9AA3B2',price:24,weight:1000,stock:1000,low:200,supplier:''});
+  DB.supplies.push({id:uid(),name:'Mailing box 20×15×8',type:'packaging',cost:0.55,stock:40,low:10,supplier:''});
+  DB.supplies.push({id:uid(),name:'M3 heat-set insert',type:'hardware',cost:0.08,stock:200,low:50,supplier:''});
+}
+
+/* ---------------- derived ---------------- */
+const printerRate = p => p ? (p.override!=null && p.override!=='' ? +p.override
+  : (p.life>0?p.price/p.life:0) + (p.hours>0?p.maint/p.hours:0)) : 0;
+const perGram = f => f && f.weight>0 ? f.price/f.weight : 0;
+const getF = id => DB.filaments.find(x=>x.id===id) || null;
+const getM = id => DB.printers.find(x=>x.id===id) || null;
+const getS = id => DB.supplies.find(x=>x.id===id) || null;
+
+const SEG = [
+  {k:'material',l:'Material',c:'var(--blue)'},
+  {k:'energy',l:'Electricity',c:'var(--yellow)'},
+  {k:'machine',l:'Machine',c:'var(--violet)'},
+  {k:'labour',l:'Labour',c:'var(--orange)'},
+  {k:'extras',l:'Hardware & packaging',c:'var(--teal)'},
+  {k:'failure',l:'Failure allowance',c:'var(--red)'}
+];
+const MARGINS = [{n:'Competitive',p:25},{n:'Standard',p:40},{n:'Premium',p:60},{n:'Luxury',p:80}];
+
+function drawStack(stackEl,legendEl,parts,total,segs,sumLabel){
+  stackEl.innerHTML=''; legendEl.innerHTML='';
+  segs.forEach(s=>{
+    const v = parts[s.k]||0;
+    if(total>0 && v>0){
+      const i=document.createElement('i');
+      i.style.width=(v/total*100)+'%'; i.style.background=s.c; i.title=s.l+' · '+eur(v);
+      stackEl.appendChild(i);
+    }
+    const row=document.createElement('div'); row.className='l';
+    row.innerHTML='<span class="sw" style="background:'+s.c+'"></span><span>'+s.l+'</span>'+
+      '<span class="amt">'+eur(v)+'</span><span class="pct">'+(total>0?(v/total*100).toFixed(0):0)+'%</span>';
+    legendEl.appendChild(row);
+  });
+  const sum=document.createElement('div'); sum.className='l sum';
+  sum.innerHTML='<span></span><span>'+sumLabel+'</span><span class="amt">'+eur(total)+'</span><span class="pct"></span>';
+  legendEl.appendChild(sum);
+}
+
+/* =========================================================
+   CALCULATOR
+   ========================================================= */
+function fillCalcSelects(){
+  const fs=$('c_filament'), ms=$('c_printer'), sp=$('c_supPick');
+  const keepF=fs.value, keepM=ms.value;
+  fs.innerHTML='<option value="">Manual entry</option>'+DB.filaments.map(f=>
+    '<option value="'+f.id+'">'+esc(f.brand+' '+f.material+' · '+f.colorName)+'</option>').join('');
+  ms.innerHTML='<option value="">Manual entry</option>'+DB.printers.map(p=>
+    '<option value="'+p.id+'">'+esc(p.name)+'</option>').join('');
+  sp.innerHTML='<option value="">Choose…</option>'+DB.supplies.map(s=>
+    '<option value="'+s.id+'">'+esc(s.name)+(s.sku?' ('+esc(s.sku)+')':'')+' · '+eur(s.cost)+'</option>').join('');
+  fs.value = DB.filaments.some(f=>f.id===keepF)?keepF:(DB.filaments[0]?DB.filaments[0].id:'');
+  ms.value = DB.printers.some(p=>p.id===keepM)?keepM:(DB.printers[0]?DB.printers[0].id:'');
+  syncFilament(); syncPrinter();
+}
+function syncFilament(){
+  const f=getF($('c_filament').value);
+  if(f){ $('c_perKg').value=(perGram(f)*1000).toFixed(2);
+    $('c_stockNote').textContent='In stock: '+f.stock+' g'+(f.stock<=f.low?' — below your alert level':'');
+  } else $('c_stockNote').textContent='Manual price — nothing is deducted from stock.';
+  calc();
+}
+function syncPrinter(){
+  const p=getM($('c_printer').value);
+  if(p){ $('c_rate').value=printerRate(p).toFixed(2); $('c_watts').value=p.watts; }
+  calc();
+}
+function renderJobSupplies(){
+  const box=$('c_supList');
+  if(!jobSupplies.length){ box.innerHTML='<p class="empty">No parts added.</p>'; return; }
+  box.innerHTML='';
+  jobSupplies.forEach((js,idx)=>{
+    const s=getS(js.id); if(!s) return;
+    const el=document.createElement('div'); el.className='it';
+    el.innerHTML='<span class="sw" style="background:'+(s.type==='packaging'?'var(--ash)':'var(--teal)')+'"></span>'+
+      '<span class="nm"><b>'+esc(s.name)+'</b><small>'+js.qty+' × '+eur(s.cost)+'</small></span>'+
+      '<span class="val">'+eur(js.qty*s.cost)+'</span>';
+    const acts=document.createElement('span'); acts.className='acts';
+    const b=document.createElement('button'); b.textContent='remove';
+    b.addEventListener('click',()=>{ jobSupplies.splice(idx,1); renderJobSupplies(); calc(); });
+    acts.appendChild(b); el.appendChild(acts); box.appendChild(el);
+  });
+}
+function calc(){
+  const qty=Math.max(1,Math.round(num('c_qty')));
+  const printH=num('c_hrs')+num('c_mins')/60;
+  const pg=num('c_perKg')/1000;
+  const grams=num('c_grams')*(1+num('c_waste')/100);
+  const supCost=jobSupplies.reduce((a,js)=>{const s=getS(js.id);return a+(s?s.cost*js.qty:0);},0);
+
+  const material=grams*pg;
+  const energy=(num('c_watts')/1000)*printH*DB.settings.kwh;
+  const machine=printH*num('c_rate');
+  const labour=(num('c_post')/60)*num('c_wage')+(num('c_setup')/60)*num('c_wage')/qty;
+  const extras=supCost+num('c_extraHw')+num('c_pack')+num('c_ship');
+  const failure=(material+energy+machine)*(num('c_fail')/100);
+  const parts={material,energy,machine,labour,extras,failure};
+  const unit=material+energy+machine+labour+extras+failure;
+
+  lastCalc={parts,unit,qty,grams,printH,
+    filamentId:$('c_filament').value, printerId:$('c_printer').value,
+    name:val('jobName')||'Untitled part', supplies:jobSupplies.slice()};
+
+  $('c_unit').innerHTML=eur(unit)+'<span>excl. VAT</span>';
+  $('c_batch').textContent=eur(unit*qty);
+  $('c_pg').textContent=grams>0?eur(unit/grams):eur(0);
+  $('c_ph').textContent=printH>0?eur(unit/printH):eur(0);
+  $('c_matNote').textContent=grams>0?grams.toFixed(1)+' g incl. purge':'';
+  const p=getM($('c_printer').value);
+  $('c_printerNote').textContent=p?printerRate(p).toFixed(2).replace('.',',')+' €/h · '+p.watts+' W':'';
+
+  drawStack($('c_stack'),$('c_legend'),parts,unit,SEG,'Cost price');
+
+  const vat=num('c_vat')/100;
+  const rungs=MARGINS.concat([{n:'Custom',p:num('c_margin')}]);
+  const lad=$('c_ladder'); lad.innerHTML='';
+  rungs.forEach(r=>{
+    const price=unit*(1+r.p/100);
+    const el=document.createElement('div');
+    el.className='l'+(Math.abs(r.p-chosenMargin)<0.001?' on':'');
+    el.innerHTML='<div class="name">'+r.n+'<small>+'+r.p.toFixed(0)+'% · '+eur(price-unit)+' profit</small></div>'+
+      '<div class="price">'+eur(price)+'<small>'+eur(price*(1+vat))+' incl. VAT</small></div>';
+    el.addEventListener('click',()=>{ chosenMargin=r.p; calc(); });
+    lad.appendChild(el);
+  });
+}
+
+/* =========================================================
+   FILAMENTS
+   ========================================================= */
+function renderFilaments(){
+  const box=$('f_list');
+  const low=DB.filaments.filter(f=>f.stock<=f.low).length;
+  $('f_stockNote').textContent=DB.filaments.length+' spools'+(low?' · '+low+' low':'');
+  if(!DB.filaments.length){ box.innerHTML='<p class="empty">No spools yet. Add one on the right.</p>'; return; }
+  box.innerHTML='';
+  DB.filaments.forEach(f=>{
+    const el=document.createElement('div'); el.className='it';
+    const link=safeUrl(f.url);
+    const title=link
+      ? '<a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(f.brand+' '+f.material)+'</a>'
+      : esc(f.brand+' '+f.material);
+    el.innerHTML='<span class="sw" style="background:'+esc(f.color)+'"></span>'+
+      '<span class="nm"><b>'+title+'</b><small>'+esc(f.colorName||'')+
+        (f.sku?' · '+esc(f.sku):'')+(f.supplier?' · '+esc(f.supplier):'')+
+        (link?' · bestellen':'')+'</small></span>'+
+      '<span class="val">'+eur(perGram(f)*1000)+'/kg<small class="'+(f.stock<=f.low?'low':'')+'">'+f.stock+' g op voorraad</small></span>';
+    el.appendChild(actions(()=>editFilament(f.id),()=>delItem('filaments',f.id,renderFilaments)));
+    box.appendChild(el);
+  });
+}
+function actions(onEdit,onDel){
+  const a=document.createElement('span'); a.className='acts';
+  const e=document.createElement('button'); e.textContent='edit'; e.addEventListener('click',onEdit);
+  const d=document.createElement('button'); d.textContent='delete'; d.addEventListener('click',onDel);
+  a.appendChild(e); a.appendChild(d); return a;
+}
+function delItem(coll,id,after){
+  DB[coll]=DB[coll].filter(x=>x.id!==id); persist(); after(); refreshAll();
+}
+function editFilament(id){
+  const f=getF(id); if(!f) return;
+  editing.f=id; $('f_formTitle').textContent='Edit spool';
+  $('f_brand').value=f.brand; $('f_material').value=f.material; $('f_colorName').value=f.colorName;
+  $('f_color').value=f.color; $('f_price').value=f.price; $('f_weight').value=f.weight;
+  $('f_stock').value=f.stock; $('f_low').value=f.low; $('f_supplier').value=f.supplier||'';
+  $('f_sku').value=f.sku||''; $('f_url').value=f.url||'';
+}
+function clearFilamentForm(){
+  editing.f=null; $('f_formTitle').textContent='New spool';
+  ['f_brand','f_material','f_colorName','f_supplier','f_sku','f_url'].forEach(i=>$(i).value='');
+  $('f_price').value=22; $('f_weight').value=1000; $('f_stock').value=1000; $('f_low').value=200;
+}
+function saveFilament(){
+  if(!val('f_material')){ note('f_status','Give the spool a material first.'); return; }
+  const rec={brand:val('f_brand')||'Generic',material:val('f_material'),colorName:val('f_colorName'),
+    color:$('f_color').value,price:num('f_price'),weight:num('f_weight')||1000,
+    stock:num('f_stock'),low:num('f_low'),supplier:val('f_supplier'),
+    sku:val('f_sku'),url:val('f_url')};
+  if(editing.f){ Object.assign(getF(editing.f),rec); }
+  else DB.filaments.push(Object.assign({id:uid()},rec));
+  persist('Saved.','f_status'); note('f_status','Saved.'); clearFilamentForm(); renderFilaments(); refreshAll();
+}
+
+/* =========================================================
+   PRINTERS
+   ========================================================= */
+function renderPrinters(){
+  const box=$('m_list');
+  if(!DB.printers.length){ box.innerHTML='<p class="empty">No machines yet.</p>'; return; }
+  box.innerHTML='';
+  DB.printers.forEach(p=>{
+    const el=document.createElement('div'); el.className='it';
+    el.innerHTML='<span class="sw" style="background:var(--violet)"></span>'+
+      '<span class="nm"><b>'+esc(p.name)+'</b><small>'+p.tech.toUpperCase()+' · '+p.watts+' W · '+p.life+' h life</small></span>'+
+      '<span class="val">'+eur(printerRate(p))+'/h<small>'+(p.override!=null&&p.override!==''?'manual rate':'auto')+'</small></span>';
+    el.appendChild(actions(()=>editPrinter(p.id),()=>delItem('printers',p.id,renderPrinters)));
+    box.appendChild(el);
+  });
+  const auto=(num('m_life')>0?num('m_price')/num('m_life'):0)+(num('m_hours')>0?num('m_maint')/num('m_hours'):0);
+  $('m_calcRate').textContent='· auto '+eur(auto)+'/h';
+}
+function editPrinter(id){
+  const p=getM(id); if(!p) return;
+  editing.m=id; $('m_formTitle').textContent='Edit printer';
+  $('m_name').value=p.name; $('m_tech').value=p.tech; $('m_watts').value=p.watts; $('m_price').value=p.price;
+  $('m_life').value=p.life; $('m_maint').value=p.maint; $('m_hours').value=p.hours;
+  $('m_override').value=(p.override==null?'':p.override);
+  renderPrinters();
+}
+function clearPrinterForm(){
+  editing.m=null; $('m_formTitle').textContent='New printer profile';
+  $('m_name').value=''; $('m_override').value='';
+}
+function savePrinter(){
+  if(!val('m_name')){ note('m_status','Give the machine a name first.'); return; }
+  const ov=$('m_override').value.trim();
+  const rec={name:val('m_name'),tech:$('m_tech').value,watts:num('m_watts'),price:num('m_price'),
+    life:num('m_life')||1,maint:num('m_maint'),hours:num('m_hours')||1,override:(ov===''?null:parseFloat(ov))};
+  if(editing.m) Object.assign(getM(editing.m),rec);
+  else DB.printers.push(Object.assign({id:uid()},rec));
+  persist(); note('m_status','Saved.'); clearPrinterForm(); renderPrinters(); refreshAll();
+}
+
+/* =========================================================
+   SUPPLIES
+   ========================================================= */
+function renderSupplies(){
+  const box=$('s_list');
+  const low=DB.supplies.filter(s=>s.stock<=s.low).length;
+  $('s_lowNote').textContent=DB.supplies.length+' items'+(low?' · '+low+' low':'');
+  if(!DB.supplies.length){ box.innerHTML='<p class="empty">Nothing tracked yet.</p>'; return; }
+  box.innerHTML='';
+  DB.supplies.forEach(s=>{
+    const el=document.createElement('div'); el.className='it';
+    const link=safeUrl(s.url);
+    const title=link
+      ? '<a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(s.name)+'</a>'
+      : esc(s.name);
+    el.innerHTML='<span class="sw" style="background:'+(s.type==='packaging'?'var(--ash)':'var(--teal)')+'"></span>'+
+      '<span class="nm"><b>'+title+'</b><small>'+s.type+
+        (s.sku?' · '+esc(s.sku):'')+(s.supplier?' · '+esc(s.supplier):'')+
+        (link?' · bestellen':'')+'</small></span>'+
+      '<span class="val">'+eur(s.cost)+'<small class="'+(s.stock<=s.low?'low':'')+'">'+s.stock+' op voorraad</small></span>';
+    el.appendChild(actions(()=>editSupply(s.id),()=>delItem('supplies',s.id,renderSupplies)));
+    box.appendChild(el);
+  });
+}
+function editSupply(id){
+  const s=getS(id); if(!s) return;
+  editing.s=id; $('s_formTitle').textContent='Edit item';
+  $('s_name').value=s.name; $('s_type').value=s.type; $('s_cost').value=s.cost;
+  $('s_stock').value=s.stock; $('s_low').value=s.low; $('s_supplier').value=s.supplier||'';
+  $('s_sku').value=s.sku||''; $('s_url').value=s.url||'';
+}
+function clearSupplyForm(){
+  editing.s=null; $('s_formTitle').textContent='New item';
+  $('s_name').value=''; $('s_supplier').value=''; $('s_sku').value=''; $('s_url').value='';
+}
+function saveSupply(){
+  if(!val('s_name')){ note('s_status','Give the item a name first.'); return; }
+  const rec={name:val('s_name'),type:$('s_type').value,cost:num('s_cost'),
+    stock:num('s_stock'),low:num('s_low'),supplier:val('s_supplier'),
+    sku:val('s_sku'),url:val('s_url')};
+  if(editing.s) Object.assign(getS(editing.s),rec);
+  else DB.supplies.push(Object.assign({id:uid()},rec));
+  persist(); note('s_status','Saved.'); clearSupplyForm(); renderSupplies(); refreshAll();
+}
+
+/* =========================================================
+   PRODUCTS
+   ========================================================= */
+/* Zelfde model als de calculator: setup telt mee en wordt over de batch
+   uitgesmeerd. Purge en uitval komen van het product zelf; staat daar
+   niets, dan vallen ze terug op de standaardwaarden uit Settings. */
+function productCost(p){
+  const f=getF(p.filamentId), m=getM(p.printerId);
+  const printH=p.hrs+p.mins/60;
+  const waste=(p.waste==null||p.waste==='')?DB.settings.waste:+p.waste;
+  const failPct=(p.fail==null||p.fail==='')?DB.settings.fail:+p.fail;
+  const batch=Math.max(1,+p.batch||1);
+  const material=p.grams*(1+waste/100)*perGram(f);
+  const watts=(p.watts==null||p.watts==='')?(m?m.watts:0):+p.watts;
+  const rate=(p.rate==null||p.rate==='')?printerRate(m):+p.rate;
+  const energy=watts/1000*printH*DB.settings.kwh;
+  const machine=printH*rate;
+  const labour=(p.post/60)*DB.settings.wage + ((+p.setup||0)/60)*DB.settings.wage/batch;
+  const extras=p.extras||0;
+  const failure=(material+energy+machine)*(failPct/100);
+  return {material,energy,machine,labour,extras,failure,batch:batch,printH:printH,
+          total:material+energy+machine+labour+extras+failure};
+}
+function fillProductSelects(){
+  const fs=$('p_filament'), ms=$('p_printer'), ks=$('k_product');
+  fs.innerHTML=DB.filaments.map(f=>'<option value="'+f.id+'">'+esc(f.brand+' '+f.material+' · '+f.colorName)+'</option>').join('');
+  ms.innerHTML=DB.printers.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join('');
+  ks.innerHTML='<option value="">Manual entry</option>'+DB.products.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join('');
+}
+function renderProducts(){
+  const box=$('p_list');
+  if(!DB.products.length){ box.innerHTML='<p class="empty">No products yet. Save one from the calculator or add it here.</p>'; return; }
+  box.innerHTML='';
+  DB.products.forEach(p=>{
+    const c=productCost(p), target=c.total*(1+p.margin/100);
+    const listed=p.listPrice>0?p.listPrice:null;
+    const price=listed!=null?listed:target;
+    const printH=p.hrs+p.mins/60;
+    const perHour=printH>0?(price-c.total)/printH:null;
+    const el=document.createElement('div'); el.className='it';
+    const f=getF(p.filamentId);
+    el.innerHTML='<span class="sw" style="background:'+esc(f?f.color:'var(--line)')+'"></span>'+
+      '<span class="nm"><b>'+esc(p.name)+'</b><small>'+esc(p.sku||'')+(p.channel?' · '+esc(p.channel):'')+
+      ' · cost '+eur(c.total)+' · '+(perHour!=null?eur(perHour)+'/printeruur':'geen printtijd')+'</small></span>'+
+      '<span class="val">'+eur(price)+
+      '<small>'+(listed!=null?'listed · '+pct((listed-c.total)/listed*100)+' margin':'target +'+p.margin+'%')+'</small></span>';
+    el.appendChild(actions(()=>editProduct(p.id),()=>delItem('products',p.id,renderProducts)));
+    box.appendChild(el);
+  });
+}
+function editProduct(id){
+  const p=DB.products.find(x=>x.id===id); if(!p) return;
+  editing.p=id; $('p_formTitle').textContent='Edit product';
+  $('p_name').value=p.name; $('p_sku').value=p.sku||''; $('p_margin').value=p.margin;
+  $('p_filament').value=p.filamentId; $('p_printer').value=p.printerId;
+  $('p_grams').value=p.grams; $('p_hrs').value=p.hrs; $('p_mins').value=p.mins;
+  $('p_post').value=p.post; $('p_extras').value=p.extras; $('p_channel').value=p.channel||'';
+  $('p_listPrice').value=p.listPrice||0;
+  $('p_setup').value=p.setup||0; $('p_batch').value=p.batch||1;
+  $('p_waste').value=(p.waste==null?DB.settings.waste:p.waste);
+  $('p_fail').value=(p.fail==null?DB.settings.fail:p.fail);
+  $('p_rate').value=(p.rate==null?'':p.rate);
+  $('p_watts').value=(p.watts==null?'':p.watts);
+  previewProduct();
+}
+function clearProductForm(){
+  editing.p=null; $('p_formTitle').textContent='New product';
+  ['p_name','p_sku','p_channel'].forEach(i=>$(i).value='');
+  $('p_listPrice').value=0;
+  $('p_setup').value=0; $('p_batch').value=1;
+  $('p_waste').value=DB.settings.waste; $('p_fail').value=DB.settings.fail;
+  $('p_rate').value=''; $('p_watts').value='';
+  previewProduct();
+}
+
+/* Live kostprijs onder het formulier, zodat je meteen ziet of hij
+   overeenkomt met wat de calculator zei. */
+function previewProduct(){
+  const box=$('p_preview'); if(!box) return;
+  const p={filamentId:$('p_filament').value,printerId:$('p_printer').value,
+    grams:num('p_grams'),hrs:num('p_hrs'),mins:num('p_mins'),post:num('p_post'),
+    extras:num('p_extras'),setup:num('p_setup'),batch:Math.max(1,num('p_batch')),
+    waste:num('p_waste'),fail:num('p_fail'),rate:blank('p_rate'),watts:blank('p_watts')};
+  const c=productCost(p);
+  const price=num('p_listPrice')>0?num('p_listPrice'):c.total*(1+num('p_margin')/100);
+  const perHour=c.printH>0?(price-c.total)/c.printH:null;
+  box.innerHTML=
+    '<div class="l"><span></span><span>Kostprijs per stuk</span><span class="amt">'+eur(c.total)+'</span><span class="pct"></span></div>'+
+    '<div class="l"><span></span><span>waarvan arbeid</span><span class="amt">'+eur(c.labour)+'</span><span class="pct">'+
+      (c.total>0?(c.labour/c.total*100).toFixed(0):0)+'%</span></div>'+
+    '<div class="l"><span></span><span>Verkoopprijs</span><span class="amt">'+eur(price)+'</span><span class="pct">'+
+      (price>0?((price-c.total)/price*100).toFixed(0)+'%':'')+'</span></div>'+
+    '<div class="l sum"><span></span><span>Winst per printeruur</span><span class="amt">'+
+      (perHour!=null?eur(perHour):'—')+'</span><span class="pct"></span></div>';
+}
+function saveProduct(){
+  if(!val('p_name')){ note('p_status','Give the product a name first.'); return; }
+  const rec={name:val('p_name'),sku:val('p_sku'),margin:num('p_margin'),
+    filamentId:$('p_filament').value,printerId:$('p_printer').value,
+    grams:num('p_grams'),hrs:num('p_hrs'),mins:num('p_mins'),post:num('p_post'),
+    extras:num('p_extras'),channel:val('p_channel'),listPrice:num('p_listPrice'),
+    setup:num('p_setup'),batch:Math.max(1,num('p_batch')),waste:num('p_waste'),fail:num('p_fail'),
+    rate:blank('p_rate'),watts:blank('p_watts')};
+  if(editing.p) Object.assign(DB.products.find(x=>x.id===editing.p),rec);
+  else DB.products.push(Object.assign({id:uid()},rec));
+  persist(); note('p_status','Saved.'); clearProductForm(); renderProducts(); refreshAll();
+}
+
+/* =========================================================
+   QUOTES
+   ========================================================= */
+function newQuoteFromCalc(){
+  if(!lastCalc) return;
+  const price=lastCalc.unit*(1+chosenMargin/100);
+  const q={
+    id:uid(), no:'Q-'+String(DB.quoteSeq++).padStart(4,'0'),
+    date:new Date().toISOString().slice(0,10),
+    client:{name:'',email:''}, status:'draft', notes:'',
+    vat:num('c_vat'), margin:chosenMargin, lang:DB.settings.quoteLang||'nl',
+    lines:[{name:lastCalc.name,qty:lastCalc.qty,cost:lastCalc.unit,price:price}],
+    deducted:false, filamentId:lastCalc.filamentId, grams:num('c_grams'),
+    supplies:lastCalc.supplies.slice()
+  };
+  DB.quotes.unshift(q); persist();
+  activeQuote=q.id; showTab('quotes'); renderQuotes(); renderQuoteEditor();
+}
+function newBlankQuote(){
+  const q={id:uid(), no:'Q-'+String(DB.quoteSeq++).padStart(4,'0'),
+    date:new Date().toISOString().slice(0,10),
+    client:{name:'',email:''}, status:'draft', notes:'',
+    vat:DB.settings.vat, margin:DB.settings.margin, lang:DB.settings.quoteLang||'nl',
+    lines:[], deducted:false, filamentId:'', grams:0, supplies:[]};
+  DB.quotes.unshift(q); persist();
+  activeQuote=q.id; renderQuotes(); renderQuoteEditor();
+}
+/* SKU van een regel: staat het product er nog, dan telt de huidige waarde,
+   zodat een gecorrigeerde SKU ook op oude offertes klopt. Anders de
+   vastgelegde waarde uit het moment van toevoegen. */
+function lineSku(l){
+  const p = l.productId ? DB.products.find(x=>x.id===l.productId) : null;
+  return (p && p.sku) ? p.sku : (l.sku||'');
+}
+function quoteTotals(q){
+  const cost=q.lines.reduce((a,l)=>a+l.cost*l.qty,0);
+  const net=q.lines.reduce((a,l)=>a+l.price*l.qty,0);
+  const vat=net*(q.vat/100);
+  return {cost,net,vat,gross:net+vat,profit:net-cost,
+          margin:net>0?(net-cost)/net*100:0};
+}
+function renderQuotes(){
+  const filter=$('q_filter').value;
+  const list=DB.quotes.filter(q=>!filter||q.status===filter);
+  $('q_count').textContent=DB.quotes.length+' total';
+  const box=$('q_list');
+  if(!list.length){ box.innerHTML='<p class="empty">Nothing here yet.</p>'; return; }
+  box.innerHTML='';
+  list.forEach(q=>{
+    const t=quoteTotals(q);
+    const el=document.createElement('div'); el.className='it';
+    el.innerHTML='<span class="sw" style="background:var(--blue)"></span>'+
+      '<span class="nm"><b>'+esc(q.no+' · '+(q.client.name||'No client yet'))+'</b>'+
+      '<small>'+q.date+' · '+q.lines.length+' line'+(q.lines.length>1?'s':'')+' · '+
+      esc(q.lines[0]?q.lines[0].name:'')+'</small></span>'+
+      '<span class="val">'+eur(t.gross)+'<small><span class="tag '+q.status+'">'+q.status+'</span></small></span>';
+    const a=document.createElement('span'); a.className='acts';
+    const o=document.createElement('button'); o.textContent='open';
+    o.addEventListener('click',()=>{ activeQuote=q.id; renderQuoteEditor(); });
+    const d=document.createElement('button'); d.textContent='delete';
+    d.addEventListener('click',()=>{ DB.quotes=DB.quotes.filter(x=>x.id!==q.id);
+      if(activeQuote===q.id){activeQuote=null;} persist(); renderQuotes(); renderQuoteEditor(); refreshAll(); });
+    a.appendChild(o); a.appendChild(d); el.appendChild(a);
+    box.appendChild(el);
+  });
+}
+function renderQuoteEditor(){
+  const box=$('q_edit'), docCard=$('q_docCard'), print=$('printArea');
+  const q=DB.quotes.find(x=>x.id===activeQuote);
+  if(!q){ box.innerHTML='<p class="empty">Pick a quote on the left, or price something in the calculator first.</p>';
+          docCard.hidden=true; print.innerHTML=''; return; }
+  const t=quoteTotals(q);
+  box.innerHTML=
+    '<div class="row">'+
+      '<div class="f wide"><label>Client</label><div class="inp"><input type="text" id="qe_client" value="'+esc(q.client.name)+'"></div></div>'+
+      '<div class="f wide"><label>Client email</label><div class="inp"><input type="text" id="qe_email" value="'+esc(q.client.email)+'"></div></div>'+
+      '<div class="f"><label>Status</label><div class="inp"><select id="qe_status">'+
+        ['draft','sent','accepted','paid','lost'].map(s=>'<option value="'+s+'"'+(q.status===s?' selected':'')+'>'+s+'</option>').join('')+
+      '</select></div></div>'+
+      '<div class="f"><label>VAT</label><div class="inp"><input type="number" id="qe_vat" value="'+q.vat+'" step="1"><span class="suf">%</span></div></div>'+
+      '<div class="f wide"><label>Taal van het document</label><div class="seg" id="qe_lang">'+
+        '<button type="button" data-lang="nl" aria-pressed="'+(docLang(q)==='nl')+'">Nederlands</button>'+
+        '<button type="button" data-lang="en" aria-pressed="'+(docLang(q)==='en')+'">English</button>'+
+      '</div></div>'+
+      '<div class="f wide"><label>Notes for the client</label><div class="inp"><textarea id="qe_notes">'+esc(q.notes)+'</textarea></div></div>'+
+    '</div>'+
+    '<div class="row" style="margin-top:14px">'+
+      '<div class="f wide"><label for="ql_product">Regel toevoegen</label>'+
+        '<div class="inp"><select id="ql_product"></select></div></div>'+
+      '<div class="f wide"><label for="ql_name">Omschrijving</label>'+
+        '<div class="inp"><input type="text" id="ql_name" placeholder="of typ een eigen regel"></div></div>'+
+      '<div class="f"><label for="ql_qty">Aantal</label>'+
+        '<div class="inp"><input type="number" id="ql_qty" value="1" min="1" step="1"><span class="suf">\u00d7</span></div></div>'+
+      '<div class="f"><label for="ql_price">Stukprijs</label>'+
+        '<div class="inp"><span class="pre">\u20ac</span><input type="number" id="ql_price" value="0" min="0" step="0.5"></div></div>'+
+      '<div class="f wide"><button class="btn ghost" type="button" id="ql_add">Toevoegen aan offerte</button></div>'+
+    '</div>'+
+    '<div class="list" id="qe_lines" style="margin-top:12px"></div>'+
+    '<div class="legend" style="margin-top:10px">'+
+      '<div class="l"><span></span><span>Cost</span><span class="amt">'+eur(t.cost)+'</span><span class="pct"></span></div>'+
+      '<div class="l"><span></span><span>Profit</span><span class="amt">'+eur(t.profit)+'</span><span class="pct">'+pct(t.margin)+'</span></div>'+
+      '<div class="l"><span></span><span>Net</span><span class="amt">'+eur(t.net)+'</span><span class="pct"></span></div>'+
+      '<div class="l sum"><span></span><span>Total incl. VAT</span><span class="amt">'+eur(t.gross)+'</span><span class="pct"></span></div>'+
+    '</div>'+
+    '<div class="bar">'+
+      '<button class="btn" type="button" id="qe_save">Save changes</button>'+
+      '<button class="btn ghost" type="button" id="qe_deduct"'+(q.deducted?' disabled':'')+'>'+
+        (q.deducted?'Stock already deducted':'Deduct stock')+'</button>'+
+    '</div><div class="status" id="qe_msg"></div>';
+
+  const lines=$('qe_lines'); lines.innerHTML='';
+  if(!q.lines.length) lines.innerHTML='<p class="empty">Nog geen regels. Kies hierboven een product.</p>';
+  q.lines.forEach((l,i)=>{
+    const el=document.createElement('div'); el.className='it';
+    el.innerHTML='<span class="sw" style="background:var(--teal)"></span>'+
+      '<span class="nm"><b>'+esc(l.name)+'</b><small>'+(lineSku(l)?esc(lineSku(l))+' · ':'')+
+        l.qty+' × '+eur(l.price)+' · cost '+eur(l.cost)+'</small></span>'+
+      '<span class="val">'+eur(l.price*l.qty)+'<small>'+pct((l.price-l.cost)/(l.price||1)*100)+' margin</small></span>';
+    const a=document.createElement('span'); a.className='acts';
+    const d=document.createElement('button'); d.textContent='remove';
+    d.addEventListener('click',()=>{ q.lines.splice(i,1); persist(); renderQuoteEditor(); renderQuotes(); });
+    a.appendChild(d); el.appendChild(a); lines.appendChild(el);
+  });
+
+  // productkiezer vult omschrijving en prijs; kostprijs komt altijd uit productCost()
+  $('ql_product').innerHTML='<option value="">Eigen regel</option>'+
+    DB.products.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join('');
+  $('ql_product').addEventListener('change',()=>{
+    const p=DB.products.find(x=>x.id===$('ql_product').value);
+    if(!p){ $('ql_name').value=''; $('ql_price').value=0; return; }
+    const c=productCost(p);
+    $('ql_name').value=p.name;
+    $('ql_price').value=(p.listPrice>0?p.listPrice:c.total*(1+p.margin/100)).toFixed(2);
+  });
+  $('ql_add').addEventListener('click',()=>{
+    const p=DB.products.find(x=>x.id===$('ql_product').value);
+    const name=val('ql_name')||(p?p.name:'');
+    if(!name){ note('qe_msg','Geef de regel een omschrijving.'); return; }
+    const qty=Math.max(1,Math.round(num('ql_qty')));
+    q.lines.push({name:name,qty:qty,cost:p?productCost(p).total:0,
+                  price:num('ql_price'),productId:p?p.id:null,sku:p?(p.sku||''):''});
+    const warn=q.deducted;
+    persist(); renderQuotes(); renderQuoteEditor();
+    if(warn) note('qe_msg','Toegevoegd. Let op: de voorraad was al afgeboekt voor deze offerte.');
+  });
+
+  $('qe_lang').addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    q.lang=b.dataset.lang; persist(); renderQuoteEditor();
+  });
+
+  $('qe_save').addEventListener('click',()=>{
+    q.client.name=val('qe_client'); q.client.email=val('qe_email');
+    q.status=$('qe_status').value; q.vat=num('qe_vat'); q.notes=$('qe_notes').value;
+    persist(); renderQuotes(); renderQuoteEditor(); refreshAll();
+    note('qe_msg','Opgeslagen.');
+  });
+  $('qe_deduct').addEventListener('click',()=>{
+    if(q.deducted) return;
+    const totalQty=q.lines.reduce((a,l)=>a+l.qty,0);
+    // Per regel afboeken: een offerte kan meerdere producten met eigen filament bevatten.
+    let perLine=0; const short=[];
+    q.lines.forEach(l=>{
+      if(!l.productId) return;
+      const p=DB.products.find(x=>x.id===l.productId); if(!p) return;
+      const f=getF(p.filamentId); if(!f) return;
+      const w=(p.waste==null||p.waste==='')?DB.settings.waste:+p.waste;
+      const need=p.grams*(1+w/100)*l.qty;
+      if(need>f.stock) short.push(f.brand+' '+f.material+': '+Math.round(need-f.stock)+' g tekort');
+      f.stock=Math.max(0,f.stock-need); perLine++;
+    });
+    // Offertes uit de calculator hebben één filament op offerteniveau.
+    if(!perLine && q.filamentId){
+      const f=getF(q.filamentId);
+      if(f) f.stock=Math.max(0,f.stock-(q.grams||0)*totalQty*(1+DB.settings.waste/100));
+    }
+    (q.supplies||[]).forEach(js=>{ const s=getS(js.id); if(s) s.stock=Math.max(0,s.stock-js.qty*totalQty); });
+    q.deducted=true; persist();
+    renderFilaments(); renderSupplies(); renderQuoteEditor(); refreshAll();
+    note('qe_msg', short.length ? 'Voorraad bijgewerkt, maar je komt tekort \u2014 '+short.join('; ')
+                                : 'Voorraad bijgewerkt.');
+  });
+
+  docCard.hidden=false;
+  print.innerHTML=quoteDoc(q);
+}
+/* Documenttaal. Alleen het klantdocument vertaalt mee; de rest van de app
+   blijft zoals hij is. Bedragen en datums volgen de taal van het document. */
+const DOC_T={
+  nl:{locale:'nl-NL', quote:'Offerte', date:'Datum', client:'Klant', status:'Status',
+      item:'Artikel', sku:'SKU', qty:'Aantal', unit:'Stuk', total:'Totaal',
+      net:'Netto', vat:'BTW', grand:'Totaal', vatNo:'BTW', fallback:'Uw bedrijf', each:'p/st',
+      st:{draft:'concept',sent:'verstuurd',accepted:'geaccepteerd',paid:'betaald',lost:'vervallen'}},
+  en:{locale:'en-GB', quote:'Quote', date:'Date', client:'Client', status:'Status',
+      item:'Item', sku:'SKU', qty:'Qty', unit:'Unit', total:'Total',
+      net:'Net', vat:'VAT', grand:'Total', vatNo:'VAT', fallback:'Your business', each:'each',
+      st:{draft:'draft',sent:'sent',accepted:'accepted',paid:'paid',lost:'lost'}}
+};
+const docLang = q => (q && q.lang==='en') ? 'en' : 'nl';
+function docEur(v,loc){
+  try{ return new Intl.NumberFormat(loc,{style:'currency',currency:'EUR'}).format(isFinite(v)?v:0); }
+  catch(e){ return eur(v); }
+}
+function docDate(iso,loc){
+  if(!iso) return '';
+  const d=new Date(iso+'T00:00:00');
+  return isNaN(d) ? iso : d.toLocaleDateString(loc,{year:'numeric',month:'long',day:'numeric'});
+}
+function docTerms(b,lang){
+  return lang==='en' ? (b.termsEn||b.terms||'') : (b.terms||'');
+}
+function quoteDoc(q){
+  const b=DB.settings.business, t=quoteTotals(q);
+  const lang=docLang(q), T=DOC_T[lang], L=T.locale, m=v=>docEur(v,L);
+  const logo=b.logo?'<img src="'+b.logo+'" alt="" style="max-height:60px;max-width:220px;display:block;margin-bottom:10px">':'';
+  return '<div class="doc">'+
+    '<div class="accentbar" style="background:'+esc(b.accent||'#1B45D6')+'"></div>'+
+    '<div class="head"><div>'+logo+'<h3>'+esc(b.name||T.fallback)+'</h3>'+
+      '<div style="font-size:12px;color:#5A6472">'+esc(b.tagline||'')+'</div></div>'+
+      '<div class="biz">'+[b.address,b.email,b.phone,b.vatno?T.vatNo+' '+b.vatno:''].filter(Boolean).map(esc).join('<br>')+'</div></div>'+
+    '<div class="meta">'+
+      '<div><span>'+T.quote+'</span><b>'+esc(q.no)+'</b></div>'+
+      '<div><span>'+T.date+'</span><b>'+esc(docDate(q.date,L))+'</b></div>'+
+      '<div><span>'+T.client+'</span><b>'+esc(q.client.name||'\u2014')+'</b></div>'+
+      '<div><span>'+T.status+'</span><b>'+esc(T.st[q.status]||q.status)+'</b></div></div>'+
+    (function(){
+      // SKU-kolom alleen tonen als er iets in staat, anders een lege kolom op de offerte
+      const hasSku=q.lines.some(l=>lineSku(l));
+      const span=hasSku?4:3;
+      return '<table><thead><tr><th>'+T.item+'</th>'+(hasSku?'<th>'+T.sku+'</th>':'')+
+        '<th class="n">'+T.qty+'</th><th class="n">'+T.unit+'</th><th class="n">'+T.total+'</th></tr></thead><tbody>'+
+        q.lines.map(l=>'<tr><td>'+esc(l.name)+'</td>'+
+          (hasSku?'<td style="font-family:var(--mono);font-size:12px">'+esc(lineSku(l))+'</td>':'')+
+          '<td class="n">'+l.qty+'</td><td class="n">'+m(l.price)+'</td>'+
+          '<td class="n">'+m(l.price*l.qty)+'</td></tr>').join('')+
+      '</tbody><tfoot>'+
+        '<tr><td colspan="'+span+'" class="n">'+T.net+'</td><td class="n">'+m(t.net)+'</td></tr>'+
+        '<tr><td colspan="'+span+'" class="n">'+T.vat+' '+q.vat+'%</td><td class="n">'+m(t.vat)+'</td></tr>'+
+        '<tr class="grand"><td colspan="'+span+'" class="n">'+T.grand+'</td><td class="n">'+m(t.gross)+'</td></tr>'+
+      '</tfoot></table>';
+    })()+
+    (q.notes?'<p style="margin-top:18px;font-size:13px">'+esc(q.notes)+'</p>':'')+
+    '<div class="foot">'+esc(docTerms(b,lang))+'</div></div>';
+}
+function quoteText(q){
+  const t=quoteTotals(q), b=DB.settings.business;
+  const lang=docLang(q), T=DOC_T[lang], L=T.locale, m=v=>docEur(v,L);
+  return [b.name||T.fallback, T.quote+' '+q.no+' \u00b7 '+docDate(q.date,L),
+    q.client.name?(lang==='en'?'For: ':'Voor: ')+q.client.name:'', '',
+    ...q.lines.map(l=>l.qty+' \u00d7 '+l.name+(lineSku(l)?' ('+lineSku(l)+')':'')+
+        ' \u2014 '+m(l.price)+' '+T.each+' \u2014 '+m(l.price*l.qty)),
+    '', T.net+' '+m(t.net), T.vat+' '+q.vat+'% '+m(t.vat), T.grand+' '+m(t.gross),
+    q.notes?'\n'+q.notes:'' ].filter(x=>x!==null).join('\n');
+}
+
+/* =========================================================
+   MARKETPLACE
+   ========================================================= */
+const CHANNELS=[
+  {n:'Etsy (EU/NL)',listing:0.18,trans:6.5,payPct:4,payFix:0.30,ads:0},
+  {n:'Etsy + offsite ads 15% (shop < $10k)',listing:0.18,trans:6.5,payPct:4,payFix:0.30,ads:15},
+  {n:'Etsy + offsite ads 12% (shop > $10k, verplicht)',listing:0.18,trans:6.5,payPct:4,payFix:0.30,ads:12},
+  {n:'Shopify (Basic + payments)',listing:0,trans:0,payPct:1.9,payFix:0.29,ads:0},
+  {n:'eBay',listing:0,trans:11,payPct:0,payFix:0.35,ads:0},
+  {n:'Amazon (referral)',listing:0,trans:15,payPct:0,payFix:0,ads:0},
+  {n:'Market stall / direct',listing:0,trans:0,payPct:0,payFix:0,ads:0},
+  {n:'Custom',listing:0,trans:0,payPct:0,payFix:0,ads:0}
+];
+function fillChannels(){
+  $('k_preset').innerHTML=CHANNELS.map((c,i)=>'<option value="'+i+'">'+esc(c.n)+'</option>').join('');
+}
+function applyChannel(){
+  const c=CHANNELS[+$('k_preset').value];
+  if(c.n!=='Custom'){ $('k_listing').value=c.listing; $('k_trans').value=c.trans;
+    $('k_payPct').value=c.payPct; $('k_payFix').value=c.payFix; $('k_ads').value=c.ads; }
+  market();
+}
+function marketFees(price,shipCharged){
+  const gross=price+shipCharged;
+  return {
+    listing:num('k_listing'),
+    transaction:gross*(num('k_trans')/100),
+    payment:gross*(num('k_payPct')/100)+num('k_payFix'),
+    ads:gross*(num('k_ads')/100)
+  };
+}
+/* Eén verkoop doorrekenen.
+   In BTW-plichtige modus is de vraagprijs een consumentenprijs inclusief BTW:
+   dat deel is nooit van jou. Je kosten worden dan ook netto genomen, want de
+   voorbelasting krijg je terug. Onder de KOR draag je niets af en kun je niets
+   terugvragen, dus telt alles bruto. Marketplace-fees zijn verlegd en dus netto. */
+let vatMode='incl';
+function saleMath(cost,price,shipC,shipR,vatPct){
+  const v = (vatMode==='incl') ? vatPct/100 : 0;
+  const gross = price + shipC;                 // wat de koper betaalt
+  const f = marketFees(price,shipC);
+  const fees = f.listing+f.transaction+f.payment+f.ads;
+  const netRevenue = gross/(1+v);
+  const netCost    = cost/(1+v);
+  const netShip    = shipR/(1+v);
+  const vatDue     = (gross-netRevenue) - (cost-netCost) - (shipR-netShip);
+  const profit     = netRevenue - netCost - netShip - fees;
+  return {v,gross,f,fees,netRevenue,netCost,netShip,vatDue,profit};
+}
+function market(){
+  const cost=num('k_cost'), price=num('k_price'),
+        shipC=num('k_shipCharged'), shipR=num('k_shipReal'), vatPct=num('k_vat');
+  const r=saleMath(cost,price,shipC,shipR,vatPct);
+
+  $('k_profit').innerHTML=eur(r.profit)+'<span>'+(r.profit<0?'verlies':'netto')+'</span>';
+  $('k_margin').textContent=price>0?pct(r.profit/price*100):'0%';
+  $('k_fees').textContent=eur(r.fees);
+  $('k_feePct').textContent=r.gross>0?pct(r.fees/r.gross*100):'0%';
+  $('k_vatHint').textContent = vatMode==='incl'
+    ? 'Vraagprijs en kosten worden als inclusief BTW gelezen. Af te dragen BTW bij deze verkoop: '+eur(r.vatDue)+'.'
+    : 'Onder de KOR draag je geen BTW af en vraag je geen voorbelasting terug: alles telt bruto.';
+
+  const parts={cost:r.netCost,shipping:r.netShip,vat:Math.max(0,r.vatDue),
+    listing:r.f.listing,transaction:r.f.transaction,payment:r.f.payment,ads:r.f.ads,
+    profit:Math.max(0,r.profit)};
+  const segs=[{k:'cost',l:'Maken',c:'var(--blue)'},{k:'shipping',l:'Verzending die jij betaalt',c:'var(--ash)'},
+    {k:'vat',l:'BTW naar de Belastingdienst',c:'var(--ink)'},
+    {k:'listing',l:'Listing fee',c:'var(--yellow)'},{k:'transaction',l:'Transactiekosten',c:'var(--orange)'},
+    {k:'payment',l:'Betalingsverwerking',c:'var(--violet)'},{k:'ads',l:'Offsite ads',c:'var(--red)'},
+    {k:'profit',l:'Jouw winst',c:'var(--teal)'}];
+  drawStack($('k_stack'),$('k_legend'),parts,r.gross>0?r.gross:1,segs,'De koper betaalt');
+
+  // omgekeerd rekenen, mét BTW in de vergelijking
+  const tPct=(num('k_trans')+num('k_payPct')+num('k_ads'))/100;
+  const fixed=num('k_listing')+num('k_payFix');
+  const v=r.v;
+  const solve=target=>{
+    const denom=(1/(1+v))-tPct;
+    if(denom<=0) return 0;
+    const G=(target+(cost+shipR)/(1+v)+fixed)/denom;
+    const p=G-shipC;
+    return isFinite(p)?Math.max(0,p):0;
+  };
+  const rows=[['Break-even',0],['Doelwinst',num('k_target')],
+              ['Kostprijs eruit',cost],['Kostprijs verdubbeld',cost*2]];
+  const box=$('k_reverse'); box.innerHTML='';
+  rows.forEach(([label,target])=>{
+    const p=solve(target);
+    const el=document.createElement('div'); el.className='l';
+    el.innerHTML='<div class="name">'+label+'<small>'+eur(target)+' netto in je zak</small></div>'+
+      '<div class="price">'+eur(p)+'<small>vraagprijs</small></div>';
+    el.addEventListener('click',()=>{ $('k_price').value=p.toFixed(2); market(); });
+    box.appendChild(el);
+  });
+
+  compareChannels(cost,price,shipC,shipR,vatPct);
+  monthScenario(cost,price,shipC,shipR,vatPct);
+}
+/* Alle kanalen op dezelfde prijs en kostprijs, zodat je ziet waar er
+   het meeste overblijft. Custom slaan we over: die heeft geen vaste tarieven. */
+function compareChannels(cost,price,shipC,shipR,vatPct){
+  const keep={listing:num('k_listing'),trans:num('k_trans'),payPct:num('k_payPct'),
+              payFix:num('k_payFix'),ads:num('k_ads')};
+  const rows=[];
+  CHANNELS.forEach(c=>{
+    if(c.n==='Custom') return;
+    $('k_listing').value=c.listing; $('k_trans').value=c.trans;
+    $('k_payPct').value=c.payPct; $('k_payFix').value=c.payFix; $('k_ads').value=c.ads;
+    const r=saleMath(cost,price,shipC,shipR,vatPct);
+    rows.push({name:c.n, profit:r.profit, fees:r.fees});
+  });
+  $('k_listing').value=keep.listing; $('k_trans').value=keep.trans;
+  $('k_payPct').value=keep.payPct; $('k_payFix').value=keep.payFix; $('k_ads').value=keep.ads;
+
+  rows.sort((a,b)=>b.profit-a.profit);
+  const max=Math.max(1,...rows.map(r=>Math.abs(r.profit)));
+  const current=CHANNELS[+$('k_preset').value];
+  $('k_compare').innerHTML=rows.map(r=>{
+    const w=Math.min(100,Math.abs(r.profit)/max*100);
+    const col=r.profit<0?'var(--red)':(current&&r.name===current.n?'var(--teal)':'var(--blue)');
+    return '<div class="b"><div class="lab">'+esc(r.name)+
+      (current&&r.name===current.n?' <small>· nu gekozen</small>':'')+
+      ' <small>· fees '+eur(r.fees)+'</small></div>'+
+      '<div class="track"><i style="width:'+w+'%;background:'+col+'"></i></div>'+
+      '<div class="n">'+eur(r.profit)+'</div></div>';
+  }).join('');
+}
+
+/* Volume tegen machinecapaciteit: winst per maand is pas echt als de
+   printer de uren ook aankan. */
+function monthScenario(cost,price,shipC,shipR,vatPct){
+  const n=Math.max(0,num('k_volume'));
+  const r=saleMath(cost,price,shipC,shipR,vatPct);
+  const hours=n*num('k_hoursPer');
+  const cap=Math.max(1,num('k_capacity'));
+  const load=hours/cap*100;
+
+  $('k_month').innerHTML=
+    '<div class="l"><span></span><span>Omzet (wat kopers betalen)</span><span class="amt">'+eur(r.gross*n)+'</span><span class="pct"></span></div>'+
+    (vatMode==='incl'
+      ? '<div class="l"><span></span><span>Af te dragen BTW</span><span class="amt">'+eur(r.vatDue*n)+'</span><span class="pct"></span></div>' : '')+
+    '<div class="l"><span></span><span>Marketplace-kosten</span><span class="amt">'+eur(r.fees*n)+'</span><span class="pct"></span></div>'+
+    '<div class="l"><span></span><span>Kostprijs + verzending</span><span class="amt">'+eur((r.netCost+r.netShip)*n)+'</span><span class="pct"></span></div>'+
+    '<div class="l sum"><span></span><span>Winst per maand</span><span class="amt">'+eur(r.profit*n)+'</span><span class="pct"></span></div>';
+
+  const col=load>100?'var(--red)':(load>80?'var(--yellow)':'var(--teal)');
+  $('k_load').innerHTML='<div class="b"><div class="lab">Printerbezetting <small>· '+
+    hours.toFixed(0)+' van '+cap.toFixed(0)+' uur</small></div>'+
+    '<div class="track"><i style="width:'+Math.min(100,load)+'%;background:'+col+'"></i></div>'+
+    '<div class="n">'+pct(load)+'</div></div>';
+
+  const perHour=hours>0?(r.profit*n)/hours:null;
+  $('k_loadNote').textContent = load>100
+    ? 'Dit past niet: je komt '+(hours-cap).toFixed(0)+' printeruren tekort. Meer machines, kortere prints of minder volume.'
+    : (perHour!=null ? 'Levert '+eur(perHour)+' winst per printeruur op. Er blijft '+(cap-hours).toFixed(0)+' uur over.' : '');
+}
+function marketFromProduct(){
+  const p=DB.products.find(x=>x.id===$('k_product').value);
+  if(p){ $('k_cost').value=productCost(p).total.toFixed(2);
+    if(p.listPrice>0) $('k_price').value=p.listPrice;
+    $('k_hoursPer').value=(p.hrs+p.mins/60).toFixed(2);
+    const m=getM(p.printerId); if(m && m.hours) $('k_capacity').value=Math.round(m.hours/12);
+  }
+  market();
+}
+
+/* =========================================================
+   EVENTS
+   ========================================================= */
+function eventTotals(e){
+  const costs=e.booth+e.travel+e.other+e.stockCost;
+  const profit=e.revenue-costs;
+  return {costs,profit,roi:costs>0?profit/costs*100:0,perHour:e.hours>0?profit/e.hours:0};
+}
+function renderEvents(){
+  const box=$('e_list');
+  const upcoming=DB.events.filter(e=>e.status==='applied'||e.status==='confirmed').length;
+  $('e_note').textContent=DB.events.length+' events'+(upcoming?' · '+upcoming+' upcoming':'');
+  if(!DB.events.length){ box.innerHTML='<p class="empty">No events yet.</p>'; return; }
+  box.innerHTML='';
+  DB.events.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(e=>{
+    const t=eventTotals(e);
+    const el=document.createElement('div'); el.className='it';
+    el.innerHTML='<span class="sw" style="background:'+(t.profit>=0?'var(--teal)':'var(--red)')+'"></span>'+
+      '<span class="nm"><b>'+esc(e.name)+'</b><small>'+esc(e.date||'no date')+' · '+e.status+
+      (e.deadline?' · apply by '+esc(e.deadline):'')+'</small></span>'+
+      '<span class="val">'+eur(t.profit)+'<small>'+(e.revenue>0?pct(t.roi)+' ROI · '+eur(t.perHour)+'/h':'costs '+eur(t.costs))+'</small></span>';
+    el.appendChild(actions(()=>editEvent(e.id),()=>delItem('events',e.id,renderEvents)));
+    box.appendChild(el);
+  });
+}
+function editEvent(id){
+  const e=DB.events.find(x=>x.id===id); if(!e) return;
+  editing.e=id; $('e_formTitle').textContent='Edit event';
+  $('e_name').value=e.name; $('e_date').value=e.date||''; $('e_status').value=e.status;
+  $('e_deadline').value=e.deadline||''; $('e_booth').value=e.booth; $('e_travel').value=e.travel;
+  $('e_other').value=e.other; $('e_stockCost').value=e.stockCost; $('e_revenue').value=e.revenue;
+  $('e_hours').value=e.hours; $('e_notes').value=e.notes||'';
+}
+function clearEventForm(){
+  editing.e=null; $('e_formTitle').textContent='New event';
+  ['e_name','e_date','e_deadline','e_notes'].forEach(i=>$(i).value='');
+  $('e_revenue').value=0; $('e_stockCost').value=0;
+}
+function saveEvent(){
+  if(!val('e_name')){ note('e_status_msg','Give the event a name first.'); return; }
+  const rec={name:val('e_name'),date:$('e_date').value,status:$('e_status').value,deadline:$('e_deadline').value,
+    booth:num('e_booth'),travel:num('e_travel'),other:num('e_other'),stockCost:num('e_stockCost'),
+    revenue:num('e_revenue'),hours:num('e_hours'),notes:$('e_notes').value};
+  if(editing.e) Object.assign(DB.events.find(x=>x.id===editing.e),rec);
+  else DB.events.push(Object.assign({id:uid()},rec));
+  persist(); note('e_status_msg','Saved.'); clearEventForm(); renderEvents(); refreshAll();
+}
+
+/* =========================================================
+   INSIGHTS
+   ========================================================= */
+function renderInsights(){
+  const paid=DB.quotes.filter(q=>q.status==='paid');
+  const decided=DB.quotes.filter(q=>q.status==='paid'||q.status==='accepted'||q.status==='lost');
+  const won=DB.quotes.filter(q=>q.status==='paid'||q.status==='accepted');
+  const openQ=DB.quotes.filter(q=>q.status==='draft'||q.status==='sent');
+  const rev=paid.reduce((a,q)=>a+quoteTotals(q).net,0);
+  const profit=paid.reduce((a,q)=>a+quoteTotals(q).profit,0);
+  const pipeline=openQ.reduce((a,q)=>a+quoteTotals(q).net,0);
+  const evProfit=DB.events.reduce((a,e)=>a+eventTotals(e).profit,0);
+  const stockValue=DB.filaments.reduce((a,f)=>a+f.stock*perGram(f),0)+
+                   DB.supplies.reduce((a,s)=>a+s.stock*s.cost,0);
+
+  $('i_kpis').innerHTML=[
+    ['Revenue booked',eur(rev),paid.length+' paid quotes',''],
+    ['Profit',eur(profit),rev>0?pct(profit/rev*100)+' margin':'no sales yet',profit>=0?'pos':'neg'],
+    ['Open pipeline',eur(pipeline),openQ.length+' draft or sent',''],
+    ['Stock on the shelf',eur(stockValue),DB.filaments.length+' spools · '+DB.supplies.length+' items','']
+  ].map(([k,v,s,cls])=>'<div class="kpi '+cls+'"><div class="k">'+k+'</div><div class="v">'+v+'</div><div class="s">'+s+'</div></div>').join('');
+
+  const statuses=['draft','sent','accepted','paid','lost'];
+  const counts=statuses.map(s=>DB.quotes.filter(q=>q.status===s).length);
+  const maxC=Math.max(1,...counts);
+  $('i_pipeline').innerHTML=statuses.map((s,i)=>
+    '<div class="b"><div class="lab">'+s+'</div>'+
+    '<div class="track"><i style="width:'+(counts[i]/maxC*100)+'%"></i></div>'+
+    '<div class="n">'+counts[i]+'</div></div>').join('');
+  $('i_accept').textContent=decided.length
+    ? 'Acceptance rate '+pct(won.length/decided.length*100)+' across '+decided.length+' decided quotes.'
+    : 'No decided quotes yet — mark one accepted, paid or lost to start tracking this.';
+
+  const prods=DB.products.map(p=>{
+    const c=productCost(p).total;
+    const price=p.listPrice>0?p.listPrice:c*(1+p.margin/100);
+    const printH=p.hrs+p.mins/60;
+    const profit=price-c;
+    return {name:p.name, cost:c, price:price, profit:profit, printH:printH,
+            margin:price>0?profit/price*100:0,
+            perHour:printH>0?profit/printH:null};
+  });
+  renderProductRank(prods);
+  insightsTail();
+}
+
+let rankMode='hour';
+function renderProductRank(prods){
+  const box=$('i_products'), note=$('i_ranknote');
+  if(!prods.length){ box.innerHTML='<p class="empty">Nog geen producten.</p>'; note.textContent=''; return; }
+
+  const cfg={
+    hour:  {get:p=>p.perHour, fmt:v=>v==null?'—':eur(v)+'/h',
+            note:'Winst per printeruur. Dit is het getal waarop je snoeit: de printer is het schaarse middel, niet de marge per stuk.'},
+    margin:{get:p=>p.margin,  fmt:v=>pct(v),
+            note:'Marge als percentage van de verkoopprijs. Zegt niets over hoe lang de printer bezet is.'},
+    unit:  {get:p=>p.profit,  fmt:v=>eur(v),
+            note:'Winst per verkocht stuk, ongeacht printtijd.'}
+  }[rankMode];
+
+  const rows=prods.slice().sort((a,b)=>{
+    const av=cfg.get(a), bv=cfg.get(b);
+    if(av==null) return 1; if(bv==null) return -1;
+    return bv-av;
+  }).slice(0,10);
+
+  const vals=rows.map(cfg.get).filter(v=>v!=null&&isFinite(v));
+  const max=Math.max(1,...vals.map(Math.abs));
+
+  box.innerHTML=rows.map(p=>{
+    const v=cfg.get(p);
+    const w=(v==null||!isFinite(v))?0:Math.min(100,Math.abs(v)/max*100);
+    const colour=(v!=null&&v<0)?'var(--red)':'var(--blue)';
+    const hrs=p.printH>0?p.printH.toFixed(1)+' h':'geen printtijd';
+    return '<div class="b">'+
+      '<div class="lab">'+esc(p.name)+' <small>· '+hrs+'</small></div>'+
+      '<div class="track"><i style="width:'+w+'%;background:'+colour+'"></i></div>'+
+      '<div class="n">'+cfg.fmt(v)+'</div></div>';
+  }).join('');
+
+  // where the two views disagree — that is the useful bit
+  const byHour=prods.filter(p=>p.perHour!=null).sort((a,b)=>b.perHour-a.perHour);
+  const byMargin=prods.slice().sort((a,b)=>b.margin-a.margin);
+  let extra='';
+  if(byHour.length>1 && byMargin[0] && byHour[0].name!==byMargin[0].name){
+    extra=' Let op: '+esc(byMargin[0].name)+' heeft de hoogste marge, maar '+
+          esc(byHour[0].name)+' levert meer per printeruur op.';
+  }
+  note.innerHTML=cfg.note+extra;
+}
+function insightsTail(){
+  const evProfit=DB.events.reduce((a,e)=>a+eventTotals(e).profit,0);
+  const evs=DB.events.filter(e=>e.revenue>0).sort((a,b)=>eventTotals(b).roi-eventTotals(a).roi).slice(0,8);
+  const maxRoi=Math.max(1,...evs.map(e=>Math.abs(eventTotals(e).roi)));
+  $('i_events').innerHTML=evs.length
+    ? evs.map(e=>{const t=eventTotals(e);
+        return '<div class="b">'+
+        '<div class="lab">'+esc(e.name)+'</div>'+
+        '<div class="track"><i style="width:'+Math.min(100,Math.abs(t.roi)/maxRoi*100)+'%;background:'+
+        (t.profit>=0?'var(--teal)':'var(--red)')+'"></i></div>'+
+        '<div class="n">'+eur(t.profit)+'</div></div>';}).join('')
+    : '<p class="empty">Log an event with revenue to see its return.</p>';
+  $('i_events').innerHTML+= evProfit!==0 ? '<p class="hint">Events have contributed '+eur(evProfit)+' in total.</p>' : '';
+
+  const warn=[].concat(
+    DB.filaments.filter(f=>f.stock<=f.low).map(f=>({n:f.brand+' '+f.material+' · '+f.colorName,v:f.stock+' g over',c:f.color,u:safeUrl(f.url)})),
+    DB.supplies.filter(s=>s.stock<=s.low).map(s=>({n:s.name,v:s.stock+' over',c:'var(--teal)',u:safeUrl(s.url)}))
+  );
+  $('i_warn').innerHTML=warn.length
+    ? warn.map(w=>'<div class="it"><span class="sw" style="background:'+esc(w.c)+'"></span>'+
+        '<span class="nm"><b>'+(w.u?'<a href="'+esc(w.u)+'" target="_blank" rel="noopener noreferrer">'+esc(w.n)+'</a>':esc(w.n))+'</b>'+
+        '<small>onder je alarmgrens'+(w.u?' · bestellen':'')+'</small></span>'+
+        '<span class="val low">'+esc(w.v)+'</span><span></span></div>').join('')
+    : '<p class="empty">Everything is above its alert level.</p>';
+}
+
+/* =========================================================
+   SETTINGS
+   ========================================================= */
+function loadSettings(){
+  const b=DB.settings.business;
+  $('b_name').value=b.name; $('b_tagline').value=b.tagline; $('b_email').value=b.email;
+  $('b_phone').value=b.phone; $('b_address').value=b.address; $('b_vatno').value=b.vatno;
+  $('b_accent').value=b.accent||'#1B45D6'; $('b_terms').value=b.terms;
+  $('b_termsEn').value=b.termsEn||''; $('b_quoteLang').value=DB.settings.quoteLang||'nl';
+  showLogo();
+  $('d_kwh').value=DB.settings.kwh; $('d_wage').value=DB.settings.wage; $('d_vat').value=DB.settings.vat;
+  $('d_margin').value=DB.settings.margin; $('d_fail').value=DB.settings.fail; $('d_waste').value=DB.settings.waste;
+}
+function showLogo(){
+  const b=DB.settings.business, row=$('b_logoRow');
+  if(b.logo){
+    $('b_logoPrev').src=b.logo; row.hidden=false;
+    $('b_logoNote').textContent='about '+Math.round(b.logo.length/1400)+' kB stored';
+  } else { row.hidden=true; $('b_logoNote').textContent='PNG, JPG or SVG — appears on quotes'; }
+}
+/* Raster logos are scaled down before storing, so the database stays small.
+   SVG is kept as-is because it has no pixel size to reduce. */
+function readLogo(file){
+  if(!file) return;
+  if(file.size>4*1024*1024){ note('b_status','That image is very large — try one under 4 MB.'); return; }
+  const fr=new FileReader();
+  fr.onload=()=>{
+    if(file.type==='image/svg+xml'){ storeLogo(fr.result); return; }
+    const img=new Image();
+    img.onload=()=>{
+      const max=480, scale=Math.min(1,max/img.width);
+      const c=document.createElement('canvas');
+      c.width=Math.round(img.width*scale); c.height=Math.round(img.height*scale);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      storeLogo(c.toDataURL('image/png'));
+    };
+    img.onerror=()=>note('b_status','That file could not be read as an image.');
+    img.src=fr.result;
+  };
+  fr.onerror=()=>note('b_status','That file could not be read.');
+  fr.readAsDataURL(file);
+}
+function storeLogo(dataUrl){
+  DB.settings.business.logo=dataUrl;
+  showLogo(); persist(); note('b_status','Logo saved.');
+  renderQuoteEditor();
+}
+function saveSettings(){
+  DB.settings.business={name:val('b_name'),tagline:val('b_tagline'),email:val('b_email'),phone:val('b_phone'),
+    address:val('b_address'),vatno:val('b_vatno'),accent:$('b_accent').value,terms:$('b_terms').value,
+    termsEn:$('b_termsEn').value, logo:DB.settings.business.logo||''};
+  DB.settings.quoteLang=$('b_quoteLang').value;
+  DB.settings.kwh=num('d_kwh'); DB.settings.wage=num('d_wage'); DB.settings.vat=num('d_vat');
+  DB.settings.margin=num('d_margin'); DB.settings.fail=num('d_fail'); DB.settings.waste=num('d_waste');
+  persist(); note('b_status','Settings saved.');
+  applyDefaultsToCalc(); refreshAll(); renderQuoteEditor();
+}
+function applyDefaultsToCalc(){
+  $('c_vat').value=DB.settings.vat; $('c_wage').value=DB.settings.wage;
+  $('c_fail').value=DB.settings.fail; $('c_waste').value=DB.settings.waste;
+  chosenMargin=DB.settings.margin; $('c_margin').value=DB.settings.margin;
+  calc();
+}
+
+/* =========================================================
+   plumbing
+   ========================================================= */
+function showTab(name){
+  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===name));
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',p.id==='page-'+name));
+  if(name==='insights') renderInsights();
+}
+function refreshAll(){
+  fillCalcSelects(); fillProductSelects(); renderFilaments(); renderPrinters(); renderSupplies();
+  renderProducts(); renderQuotes(); renderEvents(); market(); calc();
+  const lows=DB.filaments.filter(f=>f.stock<=f.low).length+DB.supplies.filter(s=>s.stock<=s.low).length;
+  const tab=document.querySelector('#tabs button[data-tab=insights]');
+  tab.innerHTML='Insights'+(lows?' <span class="dot"></span>':'');
+}
+
+/* =========================================================
+   opening, creating and reconnecting the database file
+   ========================================================= */
+const PICKER_OPTS={suggestedName:'printhour.sqlite',
+  types:[{description:'SQLite database',accept:{'application/vnd.sqlite3':['.sqlite','.db','.sqlite3']}}]};
+
+function openBytes(bytes){
+  sqldb = bytes ? new SQL.Database(new Uint8Array(bytes)) : new SQL.Database();
+  sqldb.run(SCHEMA);
+  migrate();
+  const n = rows('SELECT COUNT(*) AS n FROM filaments')[0].n
+          + rows('SELECT COUNT(*) AS n FROM printers')[0].n
+          + rows('SELECT COUNT(*) AS n FROM quotes')[0].n;
+  if(n>0){ loadFromSqlite(); return; }
+  DB.printers=[]; DB.filaments=[]; DB.supplies=[]; DB.products=[]; DB.quotes=[]; DB.events=[]; DB.quoteSeq=1;
+  seed(); syncToSqlite();
+}
+async function startNew(){
+  try{
+    const h=await window.showSaveFilePicker(PICKER_OPTS);
+    fileHandle=h; dbLabel=h.name; memoryOnly=false;
+    openBytes(null);
+    await idbSet('handle',h);
+    afterOpen();
+    await writeFile();
+  }catch(e){ if(e && e.name!=='AbortError') gateWarn('Could not create the file: '+e.message); }
+}
+async function openExisting(){
+  try{
+    const [h]=await window.showOpenFilePicker({types:PICKER_OPTS.types,multiple:false});
+    const file=await h.getFile();
+    const buf=await file.arrayBuffer();
+    fileHandle=h; dbLabel=h.name; memoryOnly=false;
+    openBytes(buf);
+    await idbSet('handle',h);
+    afterOpen();
+  }catch(e){ if(e && e.name!=='AbortError') gateWarn('Could not open that file: '+e.message); }
+}
+function startMemory(){
+  memoryOnly=true; fileHandle=null; dbLabel='Unsaved database';
+  openBytes(null); afterOpen();
+}
+async function saveCopy(){
+  if(!sqldb) return;
+  const bytes=sqldb.export();
+  if(hasFS){
+    try{
+      const h=await window.showSaveFilePicker(PICKER_OPTS);
+      const w=await h.createWritable(); await w.write(bytes); await w.close();
+      if(memoryOnly||!fileHandle){ fileHandle=h; dbLabel=h.name; memoryOnly=false;
+        await idbSet('handle',h); dbStatus('ok',dbLabel,'Saved '+new Date().toLocaleTimeString('nl-NL')); }
+      else dbStatus('ok',null,'Copy written');
+    }catch(e){ if(e && e.name!=='AbortError') dbStatus('err',null,'Copy failed'); }
+  } else {
+    const blob=new Blob([bytes],{type:'application/vnd.sqlite3'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download='printhour.sqlite'; a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  }
+}
+function gateWarn(msg){ const w=$('gateWarn'); w.hidden=false; w.textContent=msg; }
+function afterOpen(){
+  const g=$('gate'); g.hidden=true; g.style.display='none';
+  dbStatus(memoryOnly?'warn':'ok', dbLabel, memoryOnly?'In memory only — save a copy':'Ready');
+  loadSettings(); fillChannels(); applyChannel(); clearFilamentForm(); clearSupplyForm();
+  refreshAll(); applyDefaultsToCalc(); renderQuoteEditor(); renderJobSupplies();
+}
+
+/* Anything that escapes lands in the bar rather than dying quietly. */
+window.addEventListener('error',ev=>{
+  dbStatus('err',null,'Error: '+(ev.message||'see the browser console'));
+});
+window.addEventListener('unhandledrejection',ev=>{
+  dbStatus('err',null,'Error: '+((ev.reason&&ev.reason.message)||'see the browser console'));
+});
+
+async function boot(){
+  if(typeof initSqlJs === 'undefined'){
+    await new Promise(r=>setTimeout(r,600));   // give the fallback script a moment
+  }
+  if(typeof initSqlJs === 'undefined'){
+    $('gate').hidden=false; $('gate').style.display='';
+    gateWarn('SQLite could not be loaded. Keep the vendor folder next to index.html, or connect to the internet once so the fallback copy can load.');
+    return;
+  }
+  try{
+    SQL = await initSqlJs({locateFile:f=>'./vendor/'+f});
+  }catch(e){
+    try{ SQL = await initSqlJs({locateFile:f=>'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/'+f}); }
+    catch(e2){ $('gate').hidden=false; $('gate').style.display=''; gateWarn('SQLite failed to start: '+e2.message); return; }
+  }
+
+  // running on Umbrel? then the database lives there, not here
+  const meta=await detectServer();
+  if(meta){
+    serverMode=true; memoryOnly=false; fileHandle=null;
+    dbLabel='Umbrel · '+(meta.file||'printhour.sqlite');
+    let bytes=null;
+    if(meta.size>0){
+      try{
+        const r=await fetch('api/db',{cache:'no-store'});
+        if(r.ok){
+          const v=r.headers.get('X-DB-Version'); if(v!=null) serverVersion=Number(v);
+          const buf=await r.arrayBuffer();
+          if(buf.byteLength) bytes=buf;
+        }
+      }catch(e){
+        $('gate').hidden=false; $('gate').style.display='';
+        gateWarn('De database op Umbrel kon niet worden geladen: '+e.message);
+        return;
+      }
+    }
+    openBytes(bytes);
+    $('db_open').hidden=true; $('db_new').hidden=true;
+    $('db_copy').textContent='Download een kopie';
+    afterOpen();
+    if(!bytes) await writeFile();          // first run: seed the server
+    else dbStatus('ok',dbLabel,'Geladen van Umbrel (versie '+serverVersion+')');
+    return;
+  }
+
+  // reconnect to the file used last time
+  if(hasFS){
+    const h=await idbGet('handle');
+    if(h){
+      try{
+        let perm=await h.queryPermission({mode:'readwrite'});
+        if(perm==='prompt') perm=await h.requestPermission({mode:'readwrite'});
+        if(perm==='granted'){
+          const file=await h.getFile(); const buf=await file.arrayBuffer();
+          fileHandle=h; dbLabel=h.name; memoryOnly=false;
+          openBytes(buf); afterOpen(); return;
+        }
+      }catch(e){ /* handle went stale — fall through to the gate */ }
+    }
+    $('gate').hidden=false; $('gate').style.display='';
+    return;
+  }
+
+  // no File System Access (Safari, Firefox): keep the file in IndexedDB
+  const bytes=await idbGet('fallbackDb');
+  memoryOnly=false; fileHandle=null;
+  dbLabel = bytes ? 'Browser-held database' : 'New browser-held database';
+  openBytes(bytes||null);
+  $('gate').hidden=true;
+  dbStatus('warn',dbLabel,'This browser cannot write files directly — export a copy regularly');
+  afterOpen();
+  dbStatus('warn',dbLabel,'Autosaving inside this browser — use “Save a copy” for a real file');
+}
+
+/* --- listeners --- */
+$('db_new').addEventListener('click',()=>{ if(hasFS) startNew(); else saveCopy(); });
+$('db_open').addEventListener('click',()=>{ if(hasFS) openExisting(); else alert('This browser cannot open files directly. Use Chrome or Edge, or restore from a JSON export under Settings.'); });
+$('db_copy').addEventListener('click',saveCopy);
+$('gate_new').addEventListener('click',startNew);
+$('gate_open').addEventListener('click',openExisting);
+$('gate_temp').addEventListener('click',startMemory);
+window.addEventListener('beforeunload',e=>{
+  if(dirty || memoryOnly){ e.preventDefault(); e.returnValue=''; }
+});
+
+$('tabs').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b) showTab(b.dataset.tab); });
+
+['c_qty','c_fail','c_perKg','c_grams','c_waste','c_hrs','c_mins','c_rate','c_watts',
+ 'c_setup','c_post','c_wage','c_extraHw','c_pack','c_ship','c_vat','jobName'].forEach(id=>
+  $(id).addEventListener('input',calc));
+$('c_margin').addEventListener('input',()=>{ chosenMargin=num('c_margin'); calc(); });
+$('c_filament').addEventListener('change',syncFilament);
+$('c_printer').addEventListener('change',syncPrinter);
+$('c_supAdd').addEventListener('click',()=>{
+  const id=$('c_supPick').value; if(!id) return;
+  const q=Math.max(0,num('c_supQty'));
+  const ex=jobSupplies.find(j=>j.id===id);
+  if(ex) ex.qty+=q; else jobSupplies.push({id,qty:q});
+  renderJobSupplies(); calc();
+});
+$('c_toQuote').addEventListener('click',newQuoteFromCalc);
+$('c_toProduct').addEventListener('click',()=>{
+  if(!lastCalc) return;
+  DB.products.push({id:uid(),name:lastCalc.name,sku:'',margin:chosenMargin,
+    filamentId:$('c_filament').value||(DB.filaments[0]?DB.filaments[0].id:''),
+    printerId:$('c_printer').value||(DB.printers[0]?DB.printers[0].id:''),
+    grams:num('c_grams'),hrs:num('c_hrs'),mins:num('c_mins'),post:num('c_post'),
+    extras:lastCalc.parts.extras,channel:'',listPrice:0,
+    setup:num('c_setup'),batch:Math.max(1,num('c_qty')),
+    waste:num('c_waste'),fail:num('c_fail'),
+    rate:num('c_rate'),watts:num('c_watts')});
+  persist(); note('c_status','Saved to your product catalogue.'); renderProducts(); fillProductSelects();
+});
+$('c_toMarket').addEventListener('click',()=>{
+  if(!lastCalc) return;
+  $('k_cost').value=lastCalc.unit.toFixed(2);
+  $('k_price').value=(lastCalc.unit*(1+chosenMargin/100)).toFixed(2);
+  showTab('market'); market();
+});
+
+$('f_save').addEventListener('click',saveFilament);
+$('f_clear').addEventListener('click',clearFilamentForm);
+$('m_save').addEventListener('click',savePrinter);
+$('m_clear').addEventListener('click',clearPrinterForm);
+['m_price','m_life','m_maint','m_hours'].forEach(id=>$(id).addEventListener('input',renderPrinters));
+$('s_save').addEventListener('click',saveSupply);
+$('s_clear').addEventListener('click',clearSupplyForm);
+$('p_save').addEventListener('click',saveProduct);
+$('p_clear').addEventListener('click',clearProductForm);
+['p_grams','p_hrs','p_mins','p_post','p_extras','p_setup','p_batch','p_waste','p_fail',
+ 'p_rate','p_watts','p_margin','p_listPrice','p_filament','p_printer'].forEach(id=>{
+  $(id).addEventListener('input',previewProduct);
+  $(id).addEventListener('change',previewProduct);
+});
+$('q_filter').addEventListener('change',renderQuotes);
+$('q_new').addEventListener('click',newBlankQuote);
+$('q_print').addEventListener('click',()=>window.print());
+$('q_copy').addEventListener('click',async ()=>{
+  const q=DB.quotes.find(x=>x.id===activeQuote); if(!q) return;
+  try{ await navigator.clipboard.writeText(quoteText(q)); note('q_count','Copied to your clipboard.'); }
+  catch(e){ note('q_count','Copy blocked — select the document text instead.'); }
+  setTimeout(renderQuotes,4200);
+});
+$('k_preset').addEventListener('change',applyChannel);
+$('k_product').addEventListener('change',marketFromProduct);
+['k_listing','k_trans','k_payPct','k_payFix','k_ads','k_cost','k_price','k_shipCharged','k_shipReal','k_target',
+ 'k_vat','k_volume','k_hoursPer','k_capacity']
+  .forEach(id=>$(id).addEventListener('input',market));
+$('k_vatmode').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  vatMode=b.dataset.mode;
+  [...$('k_vatmode').children].forEach(x=>x.setAttribute('aria-pressed',x===b));
+  market();
+});
+$('e_save').addEventListener('click',saveEvent);
+$('e_clear').addEventListener('click',clearEventForm);
+$('i_rankmode').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  rankMode=b.dataset.mode;
+  [...$('i_rankmode').children].forEach(x=>x.setAttribute('aria-pressed',x===b));
+  renderInsights();
+});
+
+$('b_save').addEventListener('click',()=>{ saveSettings(); note('b_status','Saved.'); });
+
+/* Every settings field commits itself — no button to forget. */
+let settingsTimer=null;
+['b_name','b_tagline','b_email','b_phone','b_address','b_vatno','b_accent','b_terms','b_termsEn','b_quoteLang',
+ 'd_kwh','d_wage','d_vat','d_margin','d_fail','d_waste'].forEach(id=>{
+  $(id).addEventListener('input',()=>{
+    clearTimeout(settingsTimer);
+    settingsTimer=setTimeout(()=>{ saveSettings(); note('b_status2','Saved.'); },500);
+  });
+});
+$('b_logoFile').addEventListener('change',e=>readLogo(e.target.files[0]));
+$('b_logoDel').addEventListener('click',()=>{
+  DB.settings.business.logo=''; $('b_logoFile').value='';
+  showLogo(); persist(); note('b_status','Logo removed.'); renderQuoteEditor();
+});
+$('x_export').addEventListener('click',()=>{
+  $('x_import').value=JSON.stringify(DB,null,2); note('x_status','Export written into the box below — copy it somewhere safe.');
+});
+$('x_importBtn').addEventListener('click',()=>{
+  try{ const d=JSON.parse($('x_import').value); if(!d||typeof d!=='object') throw new Error();
+    DB=Object.assign(DB,d); persist(); loadSettings(); refreshAll(); note('x_status','Restored.');
+  }catch(e){ note('x_status','That is not valid JSON — nothing was changed.'); }
+});
+$('x_reset').addEventListener('click',()=>{
+  DB={settings:{business:{name:'',tagline:'',email:'',phone:'',address:'',vatno:'',accent:'#1B45D6',terms:'',logo:''},
+       kwh:0.30,wage:35,vat:21,margin:40,fail:8,waste:3,quoteLang:'nl'},
+      printers:[],filaments:[],supplies:[],products:[],quotes:[],events:[],quoteSeq:1};
+  seed(); persist(); loadSettings(); refreshAll(); activeQuote=null; renderQuoteEditor();
+  note('x_status','Everything reset to a clean workshop.');
+});
+
+$('sqlrun').addEventListener('click',()=>{
+  const out=$('sqlout'), q=$('sqlq').value.trim();
+  if(!sqldb || !q) return;
+  if(/^\s*(insert|update|delete|drop|alter|create|replace|pragma)\b/i.test(q)){
+    out.innerHTML='<p class="empty">Read-only here — use the app screens to change data.</p>'; return;
+  }
+  try{
+    const res=sqldb.exec(q);
+    if(!res.length){ out.innerHTML='<p class="empty">No rows.</p>'; return; }
+    const r=res[0];
+    out.innerHTML='<table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px">'+
+      '<thead><tr>'+r.columns.map(c=>'<th style="text-align:left;border-bottom:1px solid var(--ink);padding:6px 8px">'+esc(c)+'</th>').join('')+'</tr></thead><tbody>'+
+      r.values.map(row=>'<tr>'+row.map(v=>'<td style="border-bottom:1px solid var(--line);padding:6px 8px">'+esc(v==null?'':v)+'</td>').join('')+'</tr>').join('')+
+      '</tbody></table><p class="hint">'+r.values.length+' rows.</p>';
+  }catch(err){ out.innerHTML='<p class="empty" style="color:var(--red)">'+esc(err.message)+'</p>'; }
+});
+
+boot();
+})();
+</script>

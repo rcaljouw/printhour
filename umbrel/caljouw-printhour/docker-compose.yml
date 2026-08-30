@@ -1,0 +1,16 @@
+services:
+  app_proxy:
+    environment:
+      APP_HOST: caljouw-printhour_web_1
+      APP_PORT: 3737
+
+  web:
+    image: ghcr.io/CHANGEME/printhour:1.0.0
+    restart: on-failure
+    stop_grace_period: 30s
+    environment:
+      PORT: 3737
+      DB_PATH: /data/printhour.sqlite
+      KEEP_BACKUPS: 14
+    volumes:
+      - ${APP_DATA_DIR}/data:/data

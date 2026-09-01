@@ -3,6 +3,20 @@
 The build stamp in the app's database bar matches the entries below, so the
 running version is never a guess.
 
+## 2026-09-01a
+
+- Products carry a **collection** (Autumn, Christmas, Vases). It is a separate
+  field, not part of the article number: a collection can change without the
+  article changing, and a product can move between them. The catalogue filters
+  on it, and existing collections are offered as suggestions.
+- **Article numbers must be unique** within products, spools and supplies.
+  The check ignores case and surrounding spaces. Two articles sharing a code
+  meant two different things could appear under one code on a quote.
+- The word "bestellen" is gone from the spool and supply lists. The underlined
+  title already says it is a link.
+- The article-number placeholder now shows a real pattern instead of leftover
+  test data.
+
 ## 2026-08-30b
 
 - The Portainer stack now uses a named Docker volume instead of a host bind

@@ -96,8 +96,9 @@
   .list .sw{width:12px;height:12px;border:1px solid var(--line)}
   .list .nm{font-size:13px;min-width:0}
   .list .nm b{font-weight:600}
-  .list .nm a{color:inherit;text-decoration:underline;text-underline-offset:2px}
-  .list .nm a:hover{color:var(--blue)}
+  .list .nm a{color:inherit;text-decoration:underline;text-underline-offset:3px;
+    text-decoration-color:var(--line)}
+  .list .nm a:hover{color:var(--blue);text-decoration-color:var(--blue)}
   .list .nm small{display:block;color:var(--ash);font-family:var(--mono);font-size:11px}
   .list .val{font-family:var(--mono);font-size:13px;text-align:right;white-space:nowrap}
   .list .val small{display:block;color:var(--ash);font-size:11px}
@@ -219,7 +220,7 @@
       <span class="dbdot" id="dbdot"></span>
       <span class="dbname" id="dbname">No database open</span>
       <span class="dbsave" id="dbsave"></span>
-      <span class="dbbuild" id="dbbuild">build 2026-08-30b</span>
+      <span class="dbbuild" id="dbbuild">build 2026-09-01a</span>
       <span class="dbacts">
         <button class="btn ghost sm" type="button" id="db_open">Open…</button>
         <button class="btn ghost sm" type="button" id="db_new">New database</button>
@@ -397,13 +398,17 @@
     <div class="cols">
       <div class="card">
         <h2>Product catalogue <span class="note">costs follow your current prices</span></h2>
+        <div class="row" style="margin-bottom:12px">
+          <div class="f"><label for="p_filter">Collectie</label>
+            <div class="inp"><select id="p_filter"></select></div></div>
+        </div>
         <div class="list" id="p_list"></div>
       </div>
       <div class="card">
         <h2 id="p_formTitle">New product</h2>
         <div class="row">
           <div class="f wide"><label for="p_name">Name</label><div class="inp"><input type="text" id="p_name" placeholder="Desk cable clip"></div></div>
-          <div class="f"><label for="p_sku">SKU</label><div class="inp"><input type="text" id="p_sku" placeholder="CLIP-01"></div></div>
+          <div class="f"><label for="p_sku">SKU</label><div class="inp"><input type="text" id="p_sku" placeholder="PP-JAP-01-60-DGR"></div></div>
           <div class="f"><label for="p_margin">Target margin</label><div class="inp"><input type="number" id="p_margin" value="60" min="0" step="5"><span class="suf">%</span></div></div>
           <div class="f wide"><label for="p_filament">Filament</label><div class="inp"><select id="p_filament"></select></div></div>
           <div class="f"><label for="p_grams">Weight</label><div class="inp"><input type="number" id="p_grams" value="30" min="0" step="1"><span class="suf">g</span></div></div>
@@ -418,6 +423,9 @@
           <div class="f"><label for="p_fail">Uitval</label><div class="inp"><input type="number" id="p_fail" value="8" min="0" step="1"><span class="suf">%</span></div></div>
           <div class="f"><label for="p_rate">Machinetarief</label><div class="inp"><span class="pre">€</span><input type="number" id="p_rate" placeholder="volgt printer" min="0" step="0.05"><span class="suf">/h</span></div></div>
           <div class="f"><label for="p_watts">Opgenomen vermogen</label><div class="inp"><input type="number" id="p_watts" placeholder="volgt printer" min="0" step="5"><span class="suf">W</span></div></div>
+          <div class="f wide"><label for="p_collection">Collectie <span class="note">los van het artikelnummer — een product mag van collectie wisselen</span></label>
+            <div class="inp"><input type="text" id="p_collection" list="p_collections" placeholder="Autumn · Christmas · Vases"></div></div>
+          <datalist id="p_collections"></datalist>
           <div class="f wide"><label for="p_channel">Listed on</label><div class="inp"><input type="text" id="p_channel" placeholder="Etsy · Shopify · market stall"></div></div>
           <div class="f wide"><label for="p_listPrice">Current listing price (incl. fees you charge)</label><div class="inp"><span class="pre">€</span><input type="number" id="p_listPrice" value="0" min="0" step="0.5"></div></div>
         </div>
@@ -791,6 +799,13 @@ function safeUrl(u){
     return (p.protocol==='http:'||p.protocol==='https:') ? p.href : '';
   }catch(e){ return ''; }
 }
+/* Eén artikelnummer hoort bij één artikel. Twee producten met dezelfde code
+   levert twee verschillende dingen op één offerteregel op. */
+function skuClash(list, sku, exceptId){
+  const s=String(sku||'').trim().toLowerCase();
+  if(!s) return null;
+  return list.find(x=>x.id!==exceptId && String(x.sku||'').trim().toLowerCase()===s) || null;
+}
 const uid = () => 'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
 /* ---------------- state ---------------- */
@@ -840,7 +855,7 @@ CREATE TABLE IF NOT EXISTS products (
   grams REAL DEFAULT 0, hrs REAL DEFAULT 0, mins REAL DEFAULT 0, post REAL DEFAULT 0,
   extras REAL DEFAULT 0, channel TEXT, listPrice REAL DEFAULT 0,
   setup REAL DEFAULT 0, batch REAL DEFAULT 1, waste REAL, fail REAL,
-  rate REAL, watts REAL
+  rate REAL, watts REAL, collection TEXT
 );
 CREATE TABLE IF NOT EXISTS quotes (
   id TEXT PRIMARY KEY, no TEXT, date TEXT, clientName TEXT, clientEmail TEXT,
@@ -886,7 +901,8 @@ const MIGRATIONS=[
   'ALTER TABLE supplies ADD COLUMN sku TEXT',
   'ALTER TABLE supplies ADD COLUMN url TEXT',
   'ALTER TABLE filaments ADD COLUMN sku TEXT',
-  'ALTER TABLE filaments ADD COLUMN url TEXT'
+  'ALTER TABLE filaments ADD COLUMN url TEXT',
+  'ALTER TABLE products ADD COLUMN collection TEXT'
 ];
 function migrate(){
   MIGRATIONS.forEach(sql=>{ try{ sqldb.run(sql); }catch(e){ /* kolom bestaat al */ } });
@@ -971,10 +987,10 @@ function syncToSqlite(){
       'INSERT INTO supplies (id,name,type,cost,stock,low,supplier,sku,url) VALUES (?,?,?,?,?,?,?,?,?)',
       [x.id,x.name,x.type,x.cost,x.stock,x.low,x.supplier||'',x.sku||'',x.url||'']));
     DB.products.forEach(p=>run(
-      'INSERT INTO products (id,name,sku,margin,filamentId,printerId,grams,hrs,mins,post,extras,channel,listPrice,setup,batch,waste,fail,rate,watts) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+      'INSERT INTO products (id,name,sku,margin,filamentId,printerId,grams,hrs,mins,post,extras,channel,listPrice,setup,batch,waste,fail,rate,watts,collection) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
       [p.id,p.name,p.sku||'',p.margin,fkF(p.filamentId),fkM(p.printerId),p.grams,p.hrs,p.mins,p.post,p.extras,p.channel||'',p.listPrice||0,
        p.setup||0,p.batch||1,(p.waste==null?null:p.waste),(p.fail==null?null:p.fail),
-       (p.rate==null?null:p.rate),(p.watts==null?null:p.watts)]));
+       (p.rate==null?null:p.rate),(p.watts==null?null:p.watts),p.collection||'']));
     DB.quotes.forEach(q=>{
       run('INSERT INTO quotes (id,no,date,clientName,clientEmail,status,notes,vat,margin,deducted,filamentId,grams,lang) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [q.id,q.no,q.date,q.client.name||'',q.client.email||'',q.status,q.notes||'',q.vat,q.margin,q.deducted?1:0,fkF(q.filamentId),q.grams||0,q.lang||'nl']);
@@ -1249,8 +1265,7 @@ function renderFilaments(){
       : esc(f.brand+' '+f.material);
     el.innerHTML='<span class="sw" style="background:'+esc(f.color)+'"></span>'+
       '<span class="nm"><b>'+title+'</b><small>'+esc(f.colorName||'')+
-        (f.sku?' · '+esc(f.sku):'')+(f.supplier?' · '+esc(f.supplier):'')+
-        (link?' · bestellen':'')+'</small></span>'+
+        (f.sku?' · '+esc(f.sku):'')+(f.supplier?' · '+esc(f.supplier):'')+'</small></span>'+
       '<span class="val">'+eur(perGram(f)*1000)+'/kg<small class="'+(f.stock<=f.low?'low':'')+'">'+f.stock+' g op voorraad</small></span>';
     el.appendChild(actions(()=>editFilament(f.id),()=>delItem('filaments',f.id,renderFilaments)));
     box.appendChild(el);
@@ -1280,6 +1295,9 @@ function clearFilamentForm(){
 }
 function saveFilament(){
   if(!val('f_material')){ note('f_status','Give the spool a material first.'); return; }
+  const fClash=skuClash(DB.filaments, val('f_sku'), editing.f);
+  if(fClash){ note('f_status','Artikelnummer '+val('f_sku')+' hoort al bij '+
+    fClash.brand+' '+fClash.material+' \u00b7 '+(fClash.colorName||'')+'.'); return; }
   const rec={brand:val('f_brand')||'Generic',material:val('f_material'),colorName:val('f_colorName'),
     color:$('f_color').value,price:num('f_price'),weight:num('f_weight')||1000,
     stock:num('f_stock'),low:num('f_low'),supplier:val('f_supplier'),
@@ -1346,8 +1364,7 @@ function renderSupplies(){
       : esc(s.name);
     el.innerHTML='<span class="sw" style="background:'+(s.type==='packaging'?'var(--ash)':'var(--teal)')+'"></span>'+
       '<span class="nm"><b>'+title+'</b><small>'+s.type+
-        (s.sku?' · '+esc(s.sku):'')+(s.supplier?' · '+esc(s.supplier):'')+
-        (link?' · bestellen':'')+'</small></span>'+
+        (s.sku?' · '+esc(s.sku):'')+(s.supplier?' · '+esc(s.supplier):'')+'</small></span>'+
       '<span class="val">'+eur(s.cost)+'<small class="'+(s.stock<=s.low?'low':'')+'">'+s.stock+' op voorraad</small></span>';
     el.appendChild(actions(()=>editSupply(s.id),()=>delItem('supplies',s.id,renderSupplies)));
     box.appendChild(el);
@@ -1366,6 +1383,8 @@ function clearSupplyForm(){
 }
 function saveSupply(){
   if(!val('s_name')){ note('s_status','Give the item a name first.'); return; }
+  const sClash=skuClash(DB.supplies, val('s_sku'), editing.s);
+  if(sClash){ note('s_status','Artikelnummer '+val('s_sku')+' is al in gebruik door \u201c'+sClash.name+'\u201d.'); return; }
   const rec={name:val('s_name'),type:$('s_type').value,cost:num('s_cost'),
     stock:num('s_stock'),low:num('s_low'),supplier:val('s_supplier'),
     sku:val('s_sku'),url:val('s_url')};
@@ -1403,11 +1422,35 @@ function fillProductSelects(){
   ms.innerHTML=DB.printers.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join('');
   ks.innerHTML='<option value="">Manual entry</option>'+DB.products.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join('');
 }
+/* Collecties komen uit de producten zelf; er is geen aparte lijst om te
+   beheren. Een product mag van collectie wisselen zonder dat het artikel
+   verandert — daarom staat dit los van het artikelnummer. */
+function collections(){
+  return [...new Set(DB.products.map(p=>(p.collection||'').trim()).filter(Boolean))].sort();
+}
+function fillCollections(){
+  const list=collections();
+  $('p_collections').innerHTML=list.map(c=>'<option value="'+esc(c)+'">').join('');
+  const sel=$('p_filter'), keep=sel.value;
+  sel.innerHTML='<option value="">Alle collecties</option>'+
+    list.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('')+
+    '<option value="\u2014">Zonder collectie</option>';
+  sel.value=[...sel.options].some(o=>o.value===keep)?keep:'';
+}
 function renderProducts(){
   const box=$('p_list');
+  fillCollections();
+  const filter=$('p_filter').value;
+  const shown=DB.products.filter(p=>{
+    const c=(p.collection||'').trim();
+    if(!filter) return true;
+    if(filter==='\u2014') return !c;
+    return c===filter;
+  });
   if(!DB.products.length){ box.innerHTML='<p class="empty">No products yet. Save one from the calculator or add it here.</p>'; return; }
+  if(!shown.length){ box.innerHTML='<p class="empty">Geen producten in deze collectie.</p>'; return; }
   box.innerHTML='';
-  DB.products.forEach(p=>{
+  shown.forEach(p=>{
     const c=productCost(p), target=c.total*(1+p.margin/100);
     const listed=p.listPrice>0?p.listPrice:null;
     const price=listed!=null?listed:target;
@@ -1416,7 +1459,8 @@ function renderProducts(){
     const el=document.createElement('div'); el.className='it';
     const f=getF(p.filamentId);
     el.innerHTML='<span class="sw" style="background:'+esc(f?f.color:'var(--line)')+'"></span>'+
-      '<span class="nm"><b>'+esc(p.name)+'</b><small>'+esc(p.sku||'')+(p.channel?' · '+esc(p.channel):'')+
+      '<span class="nm"><b>'+esc(p.name)+'</b><small>'+esc(p.sku||'')+
+      (p.collection?' · '+esc(p.collection):'')+(p.channel?' · '+esc(p.channel):'')+
       ' · cost '+eur(c.total)+' · '+(perHour!=null?eur(perHour)+'/printeruur':'geen printtijd')+'</small></span>'+
       '<span class="val">'+eur(price)+
       '<small>'+(listed!=null?'listed · '+pct((listed-c.total)/listed*100)+' margin':'target +'+p.margin+'%')+'</small></span>';
@@ -1431,6 +1475,7 @@ function editProduct(id){
   $('p_filament').value=p.filamentId; $('p_printer').value=p.printerId;
   $('p_grams').value=p.grams; $('p_hrs').value=p.hrs; $('p_mins').value=p.mins;
   $('p_post').value=p.post; $('p_extras').value=p.extras; $('p_channel').value=p.channel||'';
+  $('p_collection').value=p.collection||'';
   $('p_listPrice').value=p.listPrice||0;
   $('p_setup').value=p.setup||0; $('p_batch').value=p.batch||1;
   $('p_waste').value=(p.waste==null?DB.settings.waste:p.waste);
@@ -1441,7 +1486,7 @@ function editProduct(id){
 }
 function clearProductForm(){
   editing.p=null; $('p_formTitle').textContent='New product';
-  ['p_name','p_sku','p_channel'].forEach(i=>$(i).value='');
+  ['p_name','p_sku','p_channel','p_collection'].forEach(i=>$(i).value='');
   $('p_listPrice').value=0;
   $('p_setup').value=0; $('p_batch').value=1;
   $('p_waste').value=DB.settings.waste; $('p_fail').value=DB.settings.fail;
@@ -1471,10 +1516,13 @@ function previewProduct(){
 }
 function saveProduct(){
   if(!val('p_name')){ note('p_status','Give the product a name first.'); return; }
+  const clash=skuClash(DB.products, val('p_sku'), editing.p);
+  if(clash){ note('p_status','Artikelnummer '+val('p_sku')+' is al in gebruik door \u201c'+clash.name+'\u201d.'); return; }
   const rec={name:val('p_name'),sku:val('p_sku'),margin:num('p_margin'),
     filamentId:$('p_filament').value,printerId:$('p_printer').value,
     grams:num('p_grams'),hrs:num('p_hrs'),mins:num('p_mins'),post:num('p_post'),
     extras:num('p_extras'),channel:val('p_channel'),listPrice:num('p_listPrice'),
+    collection:val('p_collection'),
     setup:num('p_setup'),batch:Math.max(1,num('p_batch')),waste:num('p_waste'),fail:num('p_fail'),
     rate:blank('p_rate'),watts:blank('p_watts')};
   if(editing.p) Object.assign(DB.products.find(x=>x.id===editing.p),rec);
@@ -2062,7 +2110,7 @@ function insightsTail(){
   $('i_warn').innerHTML=warn.length
     ? warn.map(w=>'<div class="it"><span class="sw" style="background:'+esc(w.c)+'"></span>'+
         '<span class="nm"><b>'+(w.u?'<a href="'+esc(w.u)+'" target="_blank" rel="noopener noreferrer">'+esc(w.n)+'</a>':esc(w.n))+'</b>'+
-        '<small>onder je alarmgrens'+(w.u?' · bestellen':'')+'</small></span>'+
+        '<small>onder je alarmgrens</small></span>'+
         '<span class="val low">'+esc(w.v)+'</span><span></span></div>').join('')
     : '<p class="empty">Everything is above its alert level.</p>';
 }
@@ -2330,7 +2378,7 @@ $('c_toProduct').addEventListener('click',()=>{
     filamentId:$('c_filament').value||(DB.filaments[0]?DB.filaments[0].id:''),
     printerId:$('c_printer').value||(DB.printers[0]?DB.printers[0].id:''),
     grams:num('c_grams'),hrs:num('c_hrs'),mins:num('c_mins'),post:num('c_post'),
-    extras:lastCalc.parts.extras,channel:'',listPrice:0,
+    extras:lastCalc.parts.extras,channel:'',listPrice:0,collection:'',
     setup:num('c_setup'),batch:Math.max(1,num('c_qty')),
     waste:num('c_waste'),fail:num('c_fail'),
     rate:num('c_rate'),watts:num('c_watts')});
@@ -2352,6 +2400,7 @@ $('s_save').addEventListener('click',saveSupply);
 $('s_clear').addEventListener('click',clearSupplyForm);
 $('p_save').addEventListener('click',saveProduct);
 $('p_clear').addEventListener('click',clearProductForm);
+$('p_filter').addEventListener('change',renderProducts);
 ['p_grams','p_hrs','p_mins','p_post','p_extras','p_setup','p_batch','p_waste','p_fail',
  'p_rate','p_watts','p_margin','p_listPrice','p_filament','p_printer'].forEach(id=>{
   $(id).addEventListener('input',previewProduct);
